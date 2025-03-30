@@ -1,0 +1,3 @@
+User-agent: *
+
+Sitemap: http://demandvisualiser.netlify.app/sitemap.xml
