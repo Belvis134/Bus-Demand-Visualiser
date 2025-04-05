@@ -1,29 +1,19 @@
 ---
 title: Contact
 date: "2025-04-04"
-design:
-  spacing: 5rem
-sections:
-- block: collection
-  content:
-    title: Contact Me
-    text: Reach out or learn more about my Demand Visualiser.
-  design:
-    columns: 2
-    fill_image: false
-    view: simple
-type: landing
+layout: "single"
+outputs: ["HTML"]
 ---
 
-{{< div class="home-section-bg bg-image" style="background-image: url('/media/stacked-peaks.svg'); background-size: cover; background-position: center; filter: brightness(1);" >}}
+<div class="home-section-bg bg-image" style="background-image: url('/media/stacked-peaks.svg'); background-size: cover; background-position: center; filter: brightness(1);" ></div>
 
 ## About Me
 **Belvis** is a member of Singapore Transport Critic. My experience with web development is nearly zero, but I know quite a bit about R and making R apps. This site was built to visualize **bus route demands**.
 
 ### Interests
-- 🚍 Public Transport  
-- 🖥️ Visualization Coding  
-- 📊 R Programming  
+- Public Transport  
+- Visualization Coding  
+- R Programming  
 
 ### Contact Info
 <i class="fa-solid fa-envelope"></i> [Email](mailto:pelvetine@gmail.com)  
@@ -36,5 +26,3 @@ type: landing
 ---
 ### Footer  
 © 2025 Belvis & [Singapore Transport Critic](https://sgtransportcritic.wordpress.com/)
-
-{{< /div >}}

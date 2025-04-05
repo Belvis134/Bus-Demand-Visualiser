@@ -1,3 +1,10 @@
+---
+title: "Features"
+date: "2025-04-05"
+layout: "single"
+outputs: ["HTML"]
+---
+
 # Features  
 Here are the key functionalities of the Bus Route Demand Visualizer.
 

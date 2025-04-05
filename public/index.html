@@ -1,538 +1,80 @@
 <!doctype html>
-<!-- This site was created with Hugo Blox. https://hugoblox.com -->
-<!-- Last Published: April 5, 2025 --><html lang="en-us" dir="ltr"
+
+<html lang="en-us" dir="ltr"
       data-wc-theme-default="dark">
-  
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <meta http-equiv="X-UA-Compatible" content="IE=edge" />
   <meta name="generator" content="Hugo Blox Builder 0.3.2" />
-
-  
-  
-
-
-
-
-
-
-
-
-
-
-
-
-  
-  
-  
-  
-  
-  
-
-  
-
-  
-  
-  
-    
-  
   <meta name="description" content="A web-based application for visualising origin-destination matrixes for the bus network of Singapore." />
-
-  
-  <link rel="alternate" hreflang="en-us" href="http://routedemandvis.netlify.app/" />
-
-  
-  
-  
-  
-    
-    <link rel="stylesheet" href="/css/themes/emerald.min.css" />
-  
-
-  
-  
-    
-    <link href="/dist/wc.min.05570f1deda629d4e2d77f73534a63aa04471f012db6735c59424372f467db85.css" rel="stylesheet" />
-  
-
-  
-  
-  
-
-  
-
-  <script>
-     
-    window.hbb = {
-       defaultTheme: document.documentElement.dataset.wcThemeDefault,
-       setDarkTheme: () => {
-        document.documentElement.classList.add("dark");
-        document.documentElement.style.colorScheme = "dark";
-      },
-       setLightTheme: () => {
-        document.documentElement.classList.remove("dark");
-        document.documentElement.style.colorScheme = "light";
-      }
-    }
-
-    console.debug(`Default Hugo Blox Builder theme is ${window.hbb.defaultTheme}`);
-
-    if ("wc-color-theme" in localStorage) {
-      localStorage.getItem("wc-color-theme") === "dark" ? window.hbb.setDarkTheme() : window.hbb.setLightTheme();
-    } else {
-      window.hbb.defaultTheme === "dark" ? window.hbb.setDarkTheme() : window.hbb.setLightTheme();
-      if (window.hbb.defaultTheme === "system") {
-        window.matchMedia("(prefers-color-scheme: dark)").matches ? window.hbb.setDarkTheme() : window.hbb.setLightTheme();
-      }
-    }
-  </script>
-
-  <script>
-    
-    document.addEventListener('DOMContentLoaded', function () {
-      
-      let checkboxes = document.querySelectorAll('li input[type=\'checkbox\'][disabled]');
-      checkboxes.forEach(e => {
-        e.parentElement.parentElement.classList.add('task-list');
-      });
-
-      
-      const liNodes = document.querySelectorAll('.task-list li');
-      liNodes.forEach(nodes => {
-        let textNodes = Array.from(nodes.childNodes).filter(node => node.nodeType === 3 && node.textContent.trim().length > 1);
-        if (textNodes.length > 0) {
-          const span = document.createElement('label');
-          textNodes[0].after(span);  
-          span.appendChild(nodes.querySelector('input[type=\'checkbox\']'));
-          span.appendChild(textNodes[0]);
-        }
-      });
-    });
-  </script>
-
-  
-  
-  
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-  
-  
-
-  
-  <link rel="icon" type="image/png" href="/media/icon_hu_5cac115d14ed3d49.png" />
-  <link rel="apple-touch-icon" type="image/png" href="/media/icon_hu_e7f327b39c12e7ca.png" />
-
+  <link rel="stylesheet" href="/css/themes/emerald.min.css" />
+  <link rel="icon" type="image/png" href="/media/stc-icon.png" />
   <link rel="canonical" href="http://routedemandvis.netlify.app/" />
-
-  
-  
-  
-  
-  
-  
-  
-  
-    
-    
-  
-  
-
-  
-  
-    
-    
-  
-  <meta property="twitter:card" content="summary" />
-  
   <meta property="og:site_name" content="Bus Route Demand Visualiser" />
   <meta property="og:url" content="http://routedemandvis.netlify.app/" />
   <meta property="og:title" content="Bus Route Demand Visualiser" />
-  <meta property="og:description" content="A web-based application for visualising origin-destination matrixes for the bus network of Singapore." /><meta property="og:image" content="http://routedemandvis.netlify.app/media/icon_hu_645fa481986063ef.png" />
-    <meta property="twitter:image" content="http://routedemandvis.netlify.app/media/icon_hu_645fa481986063ef.png" /><meta property="og:locale" content="en-us" />
-  
-    
-      <meta property="og:updated_time" content="2025-04-04T00:00:00&#43;00:00" />
-    
-  
-
-  
-
-<script type="application/ld+json">
-{
-  "@context": "https://schema.org",
-  "@type": "WebSite","url": "http://routedemandvis.netlify.app/"
-}
-</script>
-
-
-  
-    <script type="application/ld+json">
-{
-  "@context": "https://schema.org",
-  "@type": "SoftwareApplication",
-  "@id": "http://routedemandvis.netlify.app/",
-  "name": "Bus Route Demand Visualiser",
-  "logo": "http://routedemandvis.netlify.app/media/icon_hu_1df060215326dd50.png",
-  
-  
-  
-  
-  "url": "http://routedemandvis.netlify.app/"
-}
-</script>
-
-  
-
-
-  <title>Bus Route Demand Visualiser</title>
-
-  
-  
-  
-  
-  
-    
-    
-  
-  
-  <style>
-    @font-face {
-      font-family: 'Inter var';
-      font-style: normal;
-      font-weight: 100 900;
-      font-display: swap;
-      src: url(/dist/font/Inter.var.woff2) format(woff2);
-    }
-  </style>
-
-  
-
-  
-  
-
-
-  
-  
-    
-      
-      
-        
-        
-          
-        
-          
-        
-          
-        
-          
-        
-          
-        
-        
-        
-      
-    
-  
-  
-  
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-  
-  
-  
-  
-  
-  
-  
-  <script
-    defer
-    src="/js/hugo-blox-en.min.47736f84e20cae1bb2224dc4605239689e913811575e32b5f86a700ee9d6529d.js"
-    integrity="sha256-R3NvhOIMrhuyIk3EYFI5aJ6ROBFXXjK1&#43;GpwDunWUp0="
-  ></script>
-
-  
-  
-
-
-
-
-
-
-
-
-
-
-
+  <meta property="og:description" content="A web-based application for visualising origin-destination matrixes for the bus network of Singapore." /><meta property="og:image" content="http://routedemandvis.netlify.app/media/stc-icon.png" />
+  <meta property="twitter:image" content="http://routedemandvis.netlify.app/media/stc-icon.png" /><meta property="og:locale" content="en-us" />
+<title>Bus Route Demand Visualiser</title>
 </head>
-
   <body class="dark:bg-hb-dark dark:text-white page-wrapper" id="top">
-    <div id="page-bg"></div>
-    <div class="page-header sticky top-0 z-30">
-      
-      
-      
-        
-        
-        
-          <header id="site-header" class="header">
+  <div id="page-bg"></div>
+  <div class="page-header sticky top-0 z-30">
+  <header id="site-header" class="header">
   <nav class="navbar px-3 flex justify-left">
-    <div class="order-0 h-100">
-      
-      <a class="navbar-brand" href="/" title="Bus Route Demand Visualiser">
-        Bus Route Demand Visualiser
+    <div class="banner-container">
+      <a href="https://sgtransportcritic.wordpress.com/">
+        <img src="media/stc-banner.png" alt="STC Banner">
       </a>
+      <h1 class="site-title">Bus Route Demand Visualizer</h1>
     </div>
-    
-    <input id="nav-toggle" type="checkbox" class="hidden" />
-    <label
-      for="nav-toggle"
-      class="order-3 cursor-pointer flex items-center lg:hidden text-dark dark:text-white lg:order-1">
-      <svg id="show-button" class="h-6 fill-current block" viewBox="0 0 20 20">
-        <title>Open Menu</title>
-        <path d="M0 3h20v2H0V3z m0 6h20v2H0V9z m0 6h20v2H0V0z"></path>
-      </svg>
-      <svg id="hide-button" class="h-6 fill-current hidden" viewBox="0 0 20 20">
-        <title>Close Menu</title>
-        <polygon
-          points="11 9 22 9 22 11 11 11 11 22 9 22 9 11 -2 11 -2 9 9 9 9 -2 11 -2"
-          transform="rotate(45 10 10)"></polygon>
-      </svg>
-    </label>
-    
-
-    
-    
     <ul
       id="nav-menu"
-      class="navbar-nav order-3 hidden lg:flex w-full pb-6 lg:order-1 lg:w-auto lg:space-x-2 lg:pb-0 xl:space-x-8 justify-left
-      ">
-      
-      
-      
-      
-      
-      
+      class="navbar-nav order-3 hidden lg:flex w-full pb-6 lg:order-1 lg:w-auto lg:space-x-2 lg:pb-0 xl:space-x-8 justify-left">
       <li class="nav-item">
         <a
           class="nav-link active"
-          
           href="/"
-        >App</a
-        >
+        >App</a>
       </li>
-      
-      
-      
-      
-      
-      
       <li class="nav-item">
         <a
           class="nav-link "
-          
           href="/features"
-        >Features</a
-        >
+        >Features</a>
       </li>
-      
-      
-      
-      
-      
-      
       <li class="nav-item">
         <a
           class="nav-link "
-          
           href="/contact"
-        >Contact</a
-        >
+        >Contact</a>
       </li>
-      
-      
-      
-      
-      
-      
       <li class="nav-item">
         <a
           class="nav-link "
-          
           href="/changelog"
-        >Changelog</a
-        >
+        >Changelog</a>
       </li>
-      
-      
-      
     </ul>
-
     <div class="order-1 ml-auto flex items-center md:order-2 lg:ml-0">
-
-      
-      
-      
-
-      
-      
-
-      
-      
-
-      
-      
     </div>
   </nav>
 </header>
-
-
-
-        
-      
     </div>
     <div class="page-body  my-10">
-      
-
-
-
-
-
-
-
-
-
-
-
-
-
+    <section id="visualiser-app">
+      <h2>Bus Route Demand Visualiser</h2>
+      <iframe id="app-frame" src="https://routedemandvis.shinyapps.io/route-demand-vis/" width="100%" height="600px"></iframe>
+      <button onclick="restartApp()">Restart App</button>
+    </section>
     </div>
     <div class="page-footer">
       <footer class="container mx-auto flex flex-col justify-items-center text-sm leading-6 mt-24 mb-4 text-slate-700 dark:text-slate-200">
-
-  
-
-
-
-
-
-
-
-
-
-
-
-
-  
-  
-  
-  
-  
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-  
   <p class="powered-by text-center">
     This app is property of STC. All rights reserved.
   </p>
-  
-
-
-
-
-
-  <p class="powered-by text-center">
-    
-    
-    
-      
-      
-      
-      
-      
-      
-      Published with <!-- raw HTML omitted -->Hugo Blox Builder<!-- raw HTML omitted --> — the free, <!-- raw HTML omitted -->open source<!-- raw HTML omitted --> website builder that empowers creators.
-    
-  </p>
-
 </footer>
-
     </div>
-
-    
-    
-
-
-
-
-
-
-
-
-
-
-
   </body>
 </html>

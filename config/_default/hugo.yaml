@@ -29,8 +29,9 @@ enableRobotsTXT: true
 ignoreFiles: [\.ipynb$, .ipynb_checkpoints$, _cache$, "\\.Rmd$", "\\.Rmarkdown$"]
 disableAliases: true
 outputs:
-  home: [HTML, redirects]
+  home: [HTML]
   section: [HTML]
+  page: [HTML]
 imaging:
   resampleFilter: lanczos
   quality: 80
@@ -46,3 +47,17 @@ markup:
   goldmark:
     renderer:
       unsafe: true
+module:
+  mounts:
+    - source: layouts
+      target: layouts
+disableKinds:
+  - taxonomy
+  - term
+  - sitemap
+  - robotsTXT
+  - resources
+  - dist
+theme: ["theme-default"]
+assetDir: "static"
+uglyURLs: true

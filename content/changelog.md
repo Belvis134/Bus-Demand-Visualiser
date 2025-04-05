@@ -1,3 +1,10 @@
+---
+title: "Changelog"
+date: "2025-04-05"
+layout: "single"
+outputs: ["HTML"]
+---
+
 ### Changelog
 
 <div class="changelog-item">
