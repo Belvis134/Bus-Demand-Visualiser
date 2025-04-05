@@ -58,6 +58,6 @@ disableKinds:
   - robotsTXT
   - resources
   - dist
-theme: ["theme-default"]
+theme: "theme-default"
 assetDir: "static"
 uglyURLs: true
