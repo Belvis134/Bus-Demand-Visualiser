@@ -4,9 +4,9 @@
 # This file is formatted using YAML syntax - learn more at https://learnxinyminutes.com/docs/yaml/
 
 # Website name
-title: Hugo Academic CV Theme
+title: Bus Route Demand Visualiser
 # Website URL
-baseURL: 'http://demandvisualiser.netlify.app'
+baseURL: 'http://routedemandvis.netlify.app'
 
 ############################
 ## LANGUAGE
@@ -24,36 +24,25 @@ removePathAccents: true
 build:
   writeStats: true
 enableGitInfo: false
-summaryLength: 30
-pagination:
-  pagerSize: 10
-enableEmoji: true
+enableEmoji: false
 enableRobotsTXT: true
-footnotereturnlinkcontents: <sup>^</sup>
-ignoreFiles: [\.ipynb$, .ipynb_checkpoints$, \.Rmd$, \.Rmarkdown$, _cache$]
-permalinks:
-  authors: '/author/:slug/'
+ignoreFiles: [\.ipynb$, .ipynb_checkpoints$, _cache$, "\\.Rmd$", "\\.Rmarkdown$"]
 disableAliases: true
 outputs:
-  home: [HTML, RSS, headers, redirects, backlinks]
-  section: [HTML, RSS]
+  home: [HTML, redirects]
+  section: [HTML]
 imaging:
   resampleFilter: lanczos
   quality: 80
   anchor: smart
-timeout: 600000
-taxonomies:
-  author: authors
-  tag: tags
-  publication_type: publication_types
-markup:
-  _merge: deep
-  highlight:
-    lineNos: false
-  goldmark:
-    renderer:
-      unsafe: true
+timeout: 300000
+taxonomies: {}
 security:
   _merge: deep
 sitemap:
-  _merge: deep
+  changeFreq: monthly
+  priority: 0.5
+markup:
+  goldmark:
+    renderer:
+      unsafe: true

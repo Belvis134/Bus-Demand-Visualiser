@@ -5,26 +5,16 @@
 
 # Appearance
 appearance:
-  mode: system
-  color: emerald
+  mode: dark  # Force dark mode instead of system settings
+  color: emerald  # Keep or change to another accent color
 
 # SEO
 marketing:
   seo:
-    site_type: Person
+    site_type: SoftwareApplication  # More relevant for an app
     local_business_type: ''
-    org_name: ''
-    description: 'The highly-customizable Hugo Academic theme powered by Hugo Blox Builder. Easily create your personal academic website.'
-    twitter: 'GetResearchDev'
-  analytics:
-    google_analytics: ''
-    baidu_tongji: ''
-    plausible: ''
-    fathom: ''
-    pirsch: ''
-  verification:
-    google: ''
-    baidu: ''
+    org_name: 'Bus Route Demand Visualiser'
+    description: 'A web-based application for visualising origin-destination matrixes for the bus network of Singapore.'
 
 # Site header
 header:
@@ -32,29 +22,14 @@ header:
     enable: true
     blox: "navbar"
     fixed_to_top: true
-    show_search: true
-    show_theme_chooser: true
+    show_search: false  # Disable search if it's not needed
+    show_theme_chooser: false  # Remove unnecessary customization
     logo:
-      text: "Your Name"
+      text: "Bus Route Demand Visualiser"
 
 # Site footer
 footer:
   copyright:
-    notice: '© {year} Me. This work is licensed under {license}'
+    notice: 'This app is property of STC. All rights reserved.'
     license:
-      enable: true
-      allow_derivatives: false
-      share_alike: true
-      allow_commercial: false
-
-# Localization
-locale:
-  date_format: 'Jan 2, 2006'
-  time_format: '3:04 PM'
-
-# Site features
-features:
-  math:
-    enable: false
-  privacy_pack:
-    enable: false
+      enable: false
