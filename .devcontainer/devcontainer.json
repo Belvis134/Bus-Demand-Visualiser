@@ -20,5 +20,5 @@
 	],
 	"forwardPorts": [3838],
 	"remoteUser": "root",
-	"postCreateCommand": "Rscript /workspace/.devcontainer/install_packages.R"
+	"postCreateCommand": "Rscript -e 'renv::restore()'"
   }
