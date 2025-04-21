@@ -1,0 +1,26 @@
+# Use the official R Shiny image as the base.
+FROM rocker/shiny:latest
+
+# --- Install package dependencies ---
+# Copy the package installer files from your .devcontainer folder into the container.
+COPY .devcontainer/install_packages.R /tmp/install_packages.R
+COPY .devcontainer/packages.json /tmp/packages.json
+
+# Run the installation script to install all required R packages.
+RUN Rscript /tmp/install_packages.R
+
+# --- Set up the working directory ---
+# Set the default working directory (this is where your repository will be mounted).
+WORKDIR /workspace
+
+# --- Adjust permissions for your Shiny app folder ---
+# This ensures that the directory (and everyone within it) is writable, which is needed since your app writes files to its root.
+RUN chown -R shiny:shiny /workspace/brdv-1.4.1 && \
+    chmod -R a+rw /workspace/brdv-1.4.1
+
+# --- Expose the Shiny app port ---
+EXPOSE 3838
+
+# --- Default command ---
+# For a dev container, often a shell is more useful so you can run commands manually.
+CMD ["bash"]

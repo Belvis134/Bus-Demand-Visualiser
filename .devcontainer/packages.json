@@ -1,0 +1,12 @@
+{
+  "packages": [
+  	"shiny",
+  	"rjson",
+  	"tidyverse",
+  	"ComplexHeatmap",
+  	"circlize",
+  	"htmltools",
+  	"shinylive",
+  	"httpuv"
+  ]
+}
