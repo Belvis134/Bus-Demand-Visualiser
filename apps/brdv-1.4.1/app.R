@@ -3,7 +3,6 @@ library(rjson)
 library(tidyverse)
 library(ComplexHeatmap)
 library(circlize)
-library(httr)
 library(htmltools)
 
 ui <- fluidPage(
