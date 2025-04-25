@@ -23,7 +23,128 @@ ui <- fluidPage(
       .green_text {
         color: #00DD00;
       }
-      "))
+      ")),
+    tags$script(HTML("
+      // Fetch data from the Netlify proxy.
+      function fetch_netlify(params) {
+      const netlify_url = 'https://routedemandvis.netlify.app/.netlify/functions/datamall_proxy?year='
+                        + params.year + '&month=' + params.month + '&account_key=' + params.account_key;
+        // Return a promise that yields the netlify data.
+        return fetch(netlify_url).then(response => response.json());
+      }
+
+      // Fetch CSV (data1) from Datamall.
+      function fetch_datamall(params) {
+        return new Promise(function(resolve, reject) {
+          var year = params.year;
+          var month = params.month;
+          var account_key = params.account_key;
+
+      // Build the URL for the Datamall API call.
+      const data1_params = new URLSearchParams({ Date: year + month });
+      const data1_url = 'http://datamall2.mytransport.sg/ltaodataservice/PV/ODBus?' + data1_params.toString();
+      
+      fetch(data1_url, {
+        method: 'GET',
+        headers: {
+          'AccountKey': account_key,
+          'accept': 'application/json'
+        }
+      })
+      .then(response => response.json())
+      .then(csvJson => {
+        var link = (csvJson.value && csvJson.value[0]) ? csvJson.value[0].Link : null;
+        if (link) {
+             // Fetch the ZIP file pointed to by the link.
+             fetch(link)
+              .then(r => r.blob())
+              .then(blob => {
+               var reader = new FileReader();
+                reader.onload = function(e) {
+                 var data1_content = e.target.result;
+                  // Optionally update a status element:
+                  document.getElementById('upload_conf').innerHTML = '<span style=\"color:#00DD00; font-weight:bold;\">File import successful!</span>';
+                  resolve(data1_content);
+                };
+                reader.onerror = function(e) {
+                  reject('Error reading ZIP blob: ' + e);
+                };
+                reader.readAsText(blob);
+              })
+              .catch(err => {
+                console.error('Error fetching ZIP file:', err);
+                document.getElementById('upload_conf').innerHTML = '<span style=\"color:#BB0000; font-weight:bold;\">Error fetching CSV ZIP.</span>';
+                reject(err);
+              });
+            } else {
+              document.getElementById('upload_conf').innerHTML = '<span style=\"color:#BB0000; font-weight:bold;\">You have reached the rate limit. Try again after a while.</span>';
+              reject('Rate limit reached or no link provided.');
+            }
+          })
+          .catch(err => {
+            console.error('Error fetching Datamall JSON:', err);
+            document.getElementById('upload_conf').innerHTML = '<span style=\"color:#BB0000; font-weight:bold;\">Error fetching CSV data.</span>';
+            reject(err);
+          });
+        });
+      }
+
+      // Fetch JSON data (data2 & data3) from BusRouter.
+      function fetch_busrouter() {
+        var json_urls = [
+          'https://data.busrouter.sg/v1/services.json',
+          'https://data.busrouter.sg/v1/stops.json'
+    ];
+    return Promise.all(
+      json_urls.map(function(url) {
+        return fetch(url).then(function(response) {
+          if (!response.ok) {
+            throw new Error('Network response not ok for ' + url);
+          }
+          return response.json();
+        });
+      })
+    ).then(function(jsonArray) {
+      return { data2: jsonArray[0], data3: jsonArray[1] };
+    });
+      }
+  
+  // ---- Master Function to Chain All Requests ----
+  function start_data_fetch(params) {
+    fetch_netlify(params)
+      .then(function(netlify_data) {
+        // Kick off both CSV and BusRouter (JSON) fetches in parallel.
+        return Promise.all([
+          Promise.resolve(netlify_data), // preserve the netlify data
+          fetch_datamall(params),
+          fetch_busrouter()
+        ]);
+      })
+      .then(function(results) {
+        var netlify_data = results[0];  // from Netlify
+        var data1_content = results[1];   // CSV (data1)
+        var data2_3_content = results[2];   // { data2, data3 }
+        
+            // Combine all three sets of data.
+            var final_data = {
+              data1: data1_content,
+              data2: data2_3_content.data2,
+              data3: data2_3_content.data3
+          };
+            // Send the final aggregated data to R.
+            Shiny.setInputValue('final_data', final_data);
+          })
+          .catch(function(err) {
+          console.error('Error in processing data chain:', err);
+          document.getElementById('upload_conf').innerHTML = '<span style=\"color:#BB0000; font-weight:bold;\">' + err + '</span>';
+          });
+     }
+      // ---- Custom Message Handler to Trigger the Chain ----
+      // R will send a message with name 'start_data_fetch' and parameters
+      Shiny.addCustomMessageHandler('start_data_fetch', function(params) {
+        start_data_fetch(params);
+      });
+    "))
   ),
   
   titlePanel(tags$p(style = "color: white; text-align: center", "Bus Route Demand Visualiser 1.4.1")),
@@ -108,6 +229,7 @@ ui <- fluidPage(
       actionButton("generate","Generate Table", width = "120px")
     ),
     mainPanel(
+      htmlOutput("upload_conf2"),
       plotOutput("result_out", inline = T)
     )
   )
@@ -130,6 +252,7 @@ server <- function(input, output, session) {
   month <- reactive({input$month_in})
   data1 <- reactiveVal(NULL)
   conf_msg <- reactiveVal("")
+  conf_msg2 <- reactiveVal("")
   sp_ori <- reactive({input$ori_stops})
   sp_dst <- reactive({input$dst_stops})
   spec_stops <- reactive({input$seespecstops})
@@ -154,46 +277,39 @@ server <- function(input, output, session) {
   observeEvent(input$data1_in, {
     req(input$data1_in, !input$autoimport)
     conf_msg("")
-    data <- read.csv(input$data1_in$datapath, colClasses = c("ORIGIN_PT_CODE" = "character", "DESTINATION_PT_CODE" = "character"))
+    pre_data1 <- read.csv(input$data1_in$datapath, colClasses = c("ORIGIN_PT_CODE" = "character", "DESTINATION_PT_CODE" = "character"))
     if (!is.null(data)) {
-      data1(data)
+      data1(pre_data1)
       conf_msg("<span style='color:#00DD00; font-weight:bold;'>File upload successful!</span>")
     } else {
       conf_msg("<span style='color:#BB0000; font-weight:bold;'>File upload failed. Please check for data corruption or correct file format.</span>")
     }
   })
+
+  data_fetch <- eventReactive(input$import, {
+    list(
+      year = input$year_in,
+      month = input$month_in,
+      account_key = "1o+r1yqATGio3Rls/NnQGw=="
+    )
+  })
   
-  upload_conf2 <- eventReactive(input$import, {
-    conf_msg("")
-    req(input$autoimport)
-    url <- "http://datamall2.mytransport.sg/ltaodataservice/PV/ODBus"
-    headers <- add_headers(AccountKey = "1o+r1yqATGio3Rls/NnQGw==", accept = "application/json")
-    params <- list(Date = paste0(year(), month()))
-    response <- GET(url, query = params, headers) %>% content()
-    link <- response[["value"]][[1]][["Link"]]
-    if (!is.null(link)) {
-      data1_path <- file.path(session_temp_dir, "od-bus.zip")
-      GET(link, write_disk(data1_path, overwrite = TRUE))
-      data <- read.csv(unz("od-bus.zip", paste0("origin_destination_bus_", year(), month(), ".csv")), colClasses = c("ORIGIN_PT_CODE" = "character", "DESTINATION_PT_CODE" = "character"))
-      if (!is.null(data)) {
-        data1(data)
-        conf_msg("<span style='color:#00DD00; font-weight:bold;'>File upload successful!</span>")
-      }
-    } else {
-      conf_msg("<span style='color:#BB0000; font-weight:bold;'>You have reached the rate limit. Try again after a while.</span>")
-    }
+  observeEvent(data_fetch(), {
+    session$sendCustomMessage("start_data_fetch", data_fetch())
+  })
+  
+  observeEvent(input$final_data$data1, {
+    pre_data1 <- read.csv(text = input$data1_data, colClasses = c("ORIGIN_PT_CODE" = "character", "DESTINATION_PT_CODE" = "character"))
+    data1(pre_data1)
   })
   
   result <- eventReactive(input$generate, {
     if (is.null(data1())) {
-      stop("You need to upload something, if not what do you wanna see?!")
+      stop("<span style='color:#BB0000; font-weight:bold;'>You need to upload something, if not what do you wanna see?!")
     }
     data2_path <- file.path(session_temp_dir, "services.json")
-    data3_path    <- file.path(session_temp_dir, "stops.json")
-    GET("https://data.busrouter.sg/v1/services.json", write_disk(data2_path, overwrite = T))
-    GET("https://data.busrouter.sg/v1/stops.json", write_disk(data3_path, overwrite = T))
-    data2 <- fromJSON(file = "services.json")
-    data3 <- fromJSON(file = "stops.json")
+    data3_path <- file.path(session_temp_dir, "stops.json")
+    data3 <- input$json_data$data3
     svc2 <- as.character(svc())
     dir2 <- as.numeric(dir())
     year2 <- as.character(year())
@@ -237,7 +353,7 @@ server <- function(input, output, session) {
       stop_half_opt = svc_half()
       stop_cur <- data2[[svc2]]$routes[[dir2]]
       if (is.null(stop_cur)) {
-        stop("Invalid bus service.")
+        stop("Invalid bus service. Is your bus service withdrawn?")
       }
       terminus <- data3[[(stop_cur[length(stop_cur)])]][[3]]
       is_2way <- length(data2[[svc2]]$routes)
@@ -377,84 +493,83 @@ server <- function(input, output, session) {
       l_dst <- length(dst_stops[[1]])
       if (l_ori != l_dst) {
         stop("The lengths of your origin stops and destination stops do not match.")
-      } else {
-        dataod3 <- data.frame(c(1:l_ori), c(1:l_ori), c(1:l_ori))
-        dataod3a <- data.frame(c(1:l_ori), c(1:l_ori))
-        colnames(dataod3) <- c("ori", "dst", "dmd")
-        colnames(dataod3a) <- c("ori_name", "dst_name")
-        for (t in 1:l_ori) {
-          ori_stop <- as.numeric(ori_stops[[1]][[t]])
-          dst_stop <- as.numeric(dst_stops[[1]][[t]])
-          dataod3[t, 1] <- ori_stop
-          dataod3[t, 2] <- dst_stop
-          valid_stops <- nrow(filter(data1(),
-            ORIGIN_PT_CODE %in% dataod3[t, 1] | is.na(ORIGIN_PT_CODE),
-            DESTINATION_PT_CODE %in% dataod3[t, 2] | is.na(DESTINATION_PT_CODE),
-            !!filter_day_type, !!filter_time_period))
-          if (valid_stops == 0) {
-            stop("Invalid bus stop code(s) detected! Check your codes to see if it's a proper O-D pair, or there's absolutely no one going from A to B.")
-          }
-          dataod3[t, 3] <- data1() %>%
-            filter(., ORIGIN_PT_CODE == dataod3[t, 1],
-              DESTINATION_PT_CODE == dataod3[t, 2],
-              !!filter_day_type,
-              !!filter_time_period) %>%
-            summarise(Total = sum(TOTAL_TRIPS)) %>%
-            pull(Total) %>%
-            as.numeric()
-          if ("row_names" %in% input$stop_names) {
-            dataod3a[t, 1] <- data3[[as.character(ori_stop)]][[3]]
-            dataod3a[t, 2] <- data3[[as.character(dst_stop)]][[3]]
-          }
+      }
+      dataod3 <- data.frame(c(1:l_ori), c(1:l_ori), c(1:l_ori))
+      dataod3a <- data.frame(c(1:l_ori), c(1:l_ori))
+      colnames(dataod3) <- c("ori", "dst", "dmd")
+      colnames(dataod3a) <- c("ori_name", "dst_name")
+      for (t in 1:l_ori) {
+        ori_stop <- as.numeric(ori_stops[[1]][[t]])
+        dst_stop <- as.numeric(dst_stops[[1]][[t]])
+        dataod3[t, 1] <- ori_stop
+        dataod3[t, 2] <- dst_stop
+        valid_stops <- nrow(filter(data1(),
+          ORIGIN_PT_CODE %in% dataod3[t, 1] | is.na(ORIGIN_PT_CODE),
+          DESTINATION_PT_CODE %in% dataod3[t, 2] | is.na(DESTINATION_PT_CODE),
+          !!filter_day_type, !!filter_time_period))
+        if (valid_stops == 0) {
+          stop("Invalid bus stop code(s) detected! Check your codes to see if it's a proper O-D pair, or there's absolutely no one going from A to B.")
         }
-        dataod3 <- as.matrix(dataod3)
-        dataod3a <- as.matrix(dataod3a)
-        cols = colorRamp2(c(0, 1, 30, 300, 1500, 6000, 30000, 99000), c("gray60","white","white", "yellow", "orange", "red", "darkred","black"))
-        img_dims <- list(width = 520, height = 23 * nrow(dataod3) + 100)
-        img <- Heatmap(dataod3,
-          name = paste(day_type, "Demand,", time_period),
-          show_column_dend = FALSE,
-          show_row_dend = FALSE,
-          row_dend_reorder = FALSE,
-          column_dend_reorder = FALSE,
-          column_title = "O-D Matrix for specific stops",
-          column_title_side = "top",
-          column_names_side = "top",
-          column_names_rot = 0,
-          column_names_centered = TRUE,
-          column_labels = c("Origin", "Destination", "Demand"),
-          col = cols,
-          na_col = "gray60",
-          column_gap = unit(2, "mm"),
-          cluster_rows = FALSE,
-          cluster_columns = FALSE,
-          column_names_gp = gpar(fontsize = 15),
-          column_title_gp = gpar(fontsize = 25),
-          heatmap_legend_param = list(labels_gp = gpar(fontsize = 12), legend_width = unit(10, "cm"), legend_direction = "horizontal", at = c(0, 300, 1500, 6000, 30000, 99000), legend_width = unit(2, "cm"), color_bar = "continuous", break_dist = 1, title_position = "topcenter", heatmap_legend_side = "top", title_gp = gpar(fontsize = 12, fontface = "bold")),
-          cell_fun = function(j, i, x, y, width, height, fill) {
-            if(j %in% c(1, 2)) {
-              # Draw a white background covering the cell.
-              grid.rect(
-                x = x, y = y, width = width, height = height,
-                gp = gpar(fill = "white", col = "black", lwd = 0.2)
-              )
-              if (input$stop_names2) {
-                grid.text(sprintf("%s\n%s", dataod3[i, j], dataod3a[i, j]), x, y, gp = gpar(fontsize = 11, col = "black"))
-              } else {
-                grid.text(sprintf("%s", dataod3[i, j]), x, y, gp = gpar(fontsize = 15, col = "black"))
-              }
+        dataod3[t, 3] <- data1() %>%
+          filter(., ORIGIN_PT_CODE == dataod3[t, 1],
+            DESTINATION_PT_CODE == dataod3[t, 2],
+            !!filter_day_type,
+            !!filter_time_period) %>%
+          summarise(Total = sum(TOTAL_TRIPS)) %>%
+          pull(Total) %>%
+          as.numeric()
+        if ("row_names" %in% input$stop_names) {
+          dataod3a[t, 1] <- data3[[as.character(ori_stop)]][[3]]
+          dataod3a[t, 2] <- data3[[as.character(dst_stop)]][[3]]
+         }
+      }
+      dataod3 <- as.matrix(dataod3)
+      dataod3a <- as.matrix(dataod3a)
+      cols = colorRamp2(c(0, 1, 30, 300, 1500, 6000, 30000, 99000), c("gray60","white","white", "yellow", "orange", "red", "darkred","black"))
+      img_dims <- list(width = 520, height = 23 * nrow(dataod3) + 100)
+      img <- Heatmap(dataod3,
+        name = paste(day_type, "Demand,", time_period),
+        show_column_dend = FALSE,
+        show_row_dend = FALSE,
+        row_dend_reorder = FALSE,
+        column_dend_reorder = FALSE,
+        column_title = "O-D Matrix for specific stops",
+        column_title_side = "top",
+        column_names_side = "top",
+        column_names_rot = 0,
+        column_names_centered = TRUE,
+        column_labels = c("Origin", "Destination", "Demand"),
+        col = cols,
+        na_col = "gray60",
+        column_gap = unit(2, "mm"),
+        cluster_rows = FALSE,
+        cluster_columns = FALSE,
+        column_names_gp = gpar(fontsize = 15),
+        column_title_gp = gpar(fontsize = 25),
+        heatmap_legend_param = list(labels_gp = gpar(fontsize = 12), legend_width = unit(10, "cm"), legend_direction = "horizontal", at = c(0, 300, 1500, 6000, 30000, 99000), legend_width = unit(2, "cm"), color_bar = "continuous", break_dist = 1, title_position = "topcenter", heatmap_legend_side = "top", title_gp = gpar(fontsize = 12, fontface = "bold")),
+        cell_fun = function(j, i, x, y, width, height, fill) {
+          if(j %in% c(1, 2)) {
+            # Draw a white background covering the cell.
+            grid.rect(
+              x = x, y = y, width = width, height = height,
+              gp = gpar(fill = "white", col = "black", lwd = 0.2)
+            )
+            if (input$stop_names2) {
+              grid.text(sprintf("%s\n%s", dataod3[i, j], dataod3a[i, j]), x, y, gp = gpar(fontsize = 11, col = "black"))
+            } else {
+              grid.text(sprintf("%s", dataod3[i, j]), x, y, gp = gpar(fontsize = 15, col = "black"))
             }
-            if (j ==3) {
-              if(dataod3[i, j] > 7000){
-                grid.text(sprintf("%.0f", dataod3[i, j]), x, y, gp = gpar(fontsize = 15, col = "white"))
-              }
-              else if(dataod3[i, j] >= 0){
-                grid.text(sprintf("%.0f", dataod3[i, j]), x, y, gp = gpar(fontsize = 15))
-              }
+          }
+          if (j ==3) {
+            if(dataod3[i, j] > 7000){
+              grid.text(sprintf("%.0f", dataod3[i, j]), x, y, gp = gpar(fontsize = 15, col = "white"))
             }
-          },
-          rect_gp = gpar(col = "black", lwd = 0.2))
-        }
+            else if(dataod3[i, j] >= 0){
+              grid.text(sprintf("%.0f", dataod3[i, j]), x, y, gp = gpar(fontsize = 15))
+            }
+          }
+        },
+        rect_gp = gpar(col = "black", lwd = 0.2))
       }
       list(img = img, img_dims = img_dims)
   })
@@ -473,8 +588,8 @@ server <- function(input, output, session) {
       req(result())
       result()$img_dims$height
     })
-  observe({upload_conf2()})
   output$upload_conf <- renderText({HTML(conf_msg())})
+  output$upload_conf2 <- renderText({HTML(conf_msg2())})
 }
 
 shinyApp(ui, server)
