@@ -5,7 +5,6 @@ library(ComplexHeatmap)
 library(circlize)
 library(httr)
 library(htmltools)
-library(curl)
 
 ui <- fluidPage(
   
@@ -27,7 +26,7 @@ ui <- fluidPage(
     tags$script(HTML("
       // Fetch data from the Netlify proxy.
       function fetch_netlify(params) {
-      const netlify_url = 'https://routedemandvis.netlify.app/.netlify/functions/datamall_proxy?year='
+      const netlify_url = 'https://brdv.netlify.app/.netlify/functions/datamall_proxy?year='
                         + params.year + '&month=' + params.month + '&account_key=' + params.account_key;
         // Return a promise that yields the netlify data.
         return fetch(netlify_url).then(response => response.json());
