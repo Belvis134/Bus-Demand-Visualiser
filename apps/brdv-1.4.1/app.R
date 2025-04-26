@@ -603,12 +603,27 @@ server <- function(input, output, session) {
   })
   output$result_out <- renderPlot({
     req(result())
-    if (identical(spec_stops(), F)) {
-      draw(result()$img)
-    } else {
-      draw(result()$img, heatmap_legend_side = "top")
-    }
-  }, width = function() {
+    
+    # Clear any lingering graphics devices
+    while (dev.cur() > 1L) { dev.off() }
+    Sys.sleep(0.2)  # Allow a short pause if needed
+    
+    # Start a new grid page
+    grid::grid.newpage()
+    
+    # Wrap drawing in tryCatch for debugging
+    tryCatch({
+      if (identical(spec_stops(), FALSE)) {
+        draw(result()$img)
+      } else {
+        draw(result()$img, heatmap_legend_side = "top")
+      }
+      message("Heatmap drawn successfully")
+    }, error = function(e) {
+      message("Error drawing heatmap: ", e$message)
+    })
+  },
+  width = function() {
     req(result())
     result()$img_dims$width
   },
