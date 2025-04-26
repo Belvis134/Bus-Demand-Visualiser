@@ -151,6 +151,10 @@ ui <- fluidPage(
       Shiny.addCustomMessageHandler('start_json_fetch', function(params) {
         start_json_fetch(params);
       });
+      
+      var script = document.createElement('script');
+      script.src = 'app.js?v=' + new Date().getTime(); // Forces a fresh load
+      document.head.appendChild(script);
     "))
   ),
   
