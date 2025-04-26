@@ -241,7 +241,8 @@ ui <- fluidPage(
     ),
     mainPanel(
       htmlOutput("upload_conf2"),
-      plotOutput("result_out", inline = T)
+      plotOutput("result_out", inline = T),
+      plotOutput("test_plot", inline = T)
     )
   )
 )
@@ -598,8 +599,13 @@ server <- function(input, output, session) {
   output$result_out <- renderPlot({
     req(result())
     if (identical(spec_stops(), F)) {
-      grid::grid.newpage() 
-      draw(result()$img)
+      tryCatch({
+        grid::grid.newpage()  # Clear previous graphics
+        ComplexHeatmap::draw(result()$img)
+        print("Heatmap drawn successfully")
+      }, error = function(e) {
+        print(paste("Error in renderPlot:", e$message))
+      })
     } else {
       grid::grid.newpage() 
       draw(result()$img, heatmap_legend_side = "top")
@@ -614,6 +620,9 @@ server <- function(input, output, session) {
     })
   output$upload_conf <- renderText({HTML(conf_msg())})
   output$upload_conf2 <- renderText({HTML(conf_msg2())})
+  output$test_plot <- renderPlot({
+    plot(1:10, main = "Simple Base R Plot")
+  })
 }
 
 shinyApp(ui, server)
