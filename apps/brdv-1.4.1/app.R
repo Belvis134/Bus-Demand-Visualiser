@@ -150,8 +150,8 @@ ui <- fluidPage(
       Shiny.addCustomMessageHandler('start_csv_fetch', function(params) {
         start_csv_fetch(params);
       });
-      Shiny.addCustomMessageHandler('start_json_fetch', function() {
-        start_json_fetch();
+      Shiny.addCustomMessageHandler('start_json_fetch', function(params) {
+        start_json_fetch(params);
       });
 
       // Clear cache upon refresh
