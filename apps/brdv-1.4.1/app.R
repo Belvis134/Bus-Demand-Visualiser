@@ -10,6 +10,7 @@ print("VVV All error messages from the app are below this line VVV")
 ui <- fluidPage(
   
   tags$head(
+    theme = shinytheme("cerulean"),
     tags$title("Bus Route Demand Visualiser 1.4.1"),
     tags$style(HTML("
       body {
@@ -494,7 +495,7 @@ server <- function(input, output, session) {
         col = cols,
         na_col = "gray60",
         column_split = odgroup1,
-        column_gap = unit(2, "mm"),
+        column_gap = unit(3, "mm"),
         cluster_rows = FALSE,
         cluster_columns = FALSE,
         row_order = stop_cur3b,
