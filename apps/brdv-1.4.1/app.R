@@ -1,10 +1,10 @@
-suppressPackagesStartupMessages(library(shiny))
-suppressPackagesStartupMessages(library(rjson))
-suppressPackagesStartupMessages(library(ComplexHeatmap))
-suppressPackagesStartupMessages(library(circlize))
-suppressPackagesStartupMessages(library(htmltools))
-suppressPackagesStartupMessages(library(dplyr))
-suppressPackagesStartupMessages(library(tidyr))
+suppressPackageStartupMessages(library(shiny))
+suppressPackageStartupMessages(library(rjson))
+suppressPackageStartupMessages(library(ComplexHeatmap))
+suppressPackageStartupMessages(library(circlize))
+suppressPackageStartupMessages(library(htmltools))
+suppressPackageStartupMessages(library(dplyr))
+suppressPackageStartupMessages(library(tidyr))
 print("VVV All error messages from the app are below this line VVV")
 
 ui <- fluidPage(
