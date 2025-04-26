@@ -5,12 +5,12 @@ suppressPackageStartupMessages(library(circlize))
 suppressPackageStartupMessages(library(htmltools))
 suppressPackageStartupMessages(library(dplyr))
 suppressPackageStartupMessages(library(tidyr))
+suppressPackageStartupMessages(library(shinythemes))
 print("VVV All error messages from the app are below this line VVV")
 
 ui <- fluidPage(
   
   tags$head(
-    theme = shinytheme("cerulean"),
     tags$title("Bus Route Demand Visualiser 1.4.1"),
     tags$style(HTML("
       body {
@@ -24,6 +24,10 @@ ui <- fluidPage(
       }
       .green_text {
         color: #00DD00;
+      }
+      input[type='checkbox'],
+      input[type='radio'] {
+        accent-color: #007BFF;
       }
       ")),
     tags$script(HTML("
