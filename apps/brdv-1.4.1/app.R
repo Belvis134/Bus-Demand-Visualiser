@@ -603,45 +603,34 @@ server <- function(input, output, session) {
   })
   output$result_out <- renderImage({
     req(result())
-    
-    # Retrieve dimensions from your reactive object:
-    width  <- as.numeric(result()$img_dims$width)
-    height <- as.numeric(result()$img_dims$height)
+  
+    # Retrieve dimensions
+    img_width  <- result()$img_dims$width
+    img_height <- result()$img_dims$height
     
     # Create a temporary PNG file
-    tempFile <- tempfile(fileext = ".png")
-    
-    # Close any open graphic devices before opening a new PNG device
+    temp_file <- tempfile(fileext = ".png")
     while (dev.cur() > 1L) {
       dev.off()
     }
-    
-    # Open a new PNG device with specified dimensions and resolution.
-    # (Adjust 'res' if you need a different DPI.)
-    png(filename = tempFile, width = width, height = height, res = 96)
-    
-    # Immediately clear the device by starting a new page
+    png(filename = temp_file, width = img_width, height = img_height, units = "px", res = 96)
     grid::grid.newpage()
     
-    # Draw the heatmap with the appropriate parameters:
+    # Draw the heatmap
     if (identical(spec_stops(), FALSE)) {
       draw(result()$img)
     } else {
       draw(result()$img, heatmap_legend_side = "top")
     }
-    
-    # Close the device to finalize the image file
     dev.off()
-    
-    # Return a list with the image details for Shiny
     list(
-      src = tempFile,
+      src = temp_file,
       contentType = "image/png",
-      width = width,
-      height = height,
-      alt = "Heatmap"
+      width = img_width,
+      height = img_height,
+      alt = "Demand Heatmap"
     )
-  })
+  }, deleteFile = FALSE)
   output$upload_conf <- renderText({HTML(conf_msg())})
   output$upload_conf2 <- renderText({HTML(conf_msg2())})
 }
