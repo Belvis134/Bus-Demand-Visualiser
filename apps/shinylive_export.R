@@ -13,7 +13,11 @@ cat(export_output, sep = "\n")
 index_file <- "docs/index.html"
 html_lines <- readLines(index_file)
 html_lines <- gsub("<title>.*</title>", "<title>Bus Route Demand Visualiser 1.2.2</title>", html_lines)
-head_close_index <- grep("</head>", html_lines)[1]
+cache_control1 <- '<meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">'
+cache_control2 <- '<meta http-equiv="Pragma" content="no-cache">'
+cache_control3 <- '<meta http-equiv="Expires" content="0">'
 favicon_tag <- '<link rel="icon" type="image/png" href="www/stc-icon.png">'
-html_lines <- append(html_lines, favicon_tag, after = head_close_index - 1)
+head_close_index <- grep("</head>", html_lines)[1]
+insertion <- c(cache_control1, cache_control2, cache_control3, favicon_tag)
+html_lines <- append(html_lines, insertion, after = head_close_index - 1)
 writeLines(html_lines, index_file)
