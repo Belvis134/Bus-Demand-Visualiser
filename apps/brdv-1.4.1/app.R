@@ -605,8 +605,8 @@ server <- function(input, output, session) {
     req(result())
   
     # Retrieve dimensions
-    img_width  <- result()$img_dims$width
-    img_height <- result()$img_dims$height
+    img_width  <- 1.88 * result()$img_dims$width
+    img_height <- 1.88 * result()$img_dims$height
     
     # Create a temporary PNG file
     temp_file <- tempfile(fileext = ".png")
