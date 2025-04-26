@@ -1,10 +1,10 @@
 library(shiny)
 library(rjson)
-library(tidyverse)
 library(ComplexHeatmap)
 library(circlize)
-library(httr)
 library(htmltools)
+library(dplyr)
+library(tidyr)
 
 ui <- fluidPage(
   
@@ -28,8 +28,8 @@ ui <- fluidPage(
       function fetch_netlify(params) {
       const netlify_url = 'https://brdv.netlify.app/.netlify/functions/datamall_proxy?year='
                         + params.year + '&month=' + params.month + '&account_key=' + params.account_key;
-        // Return a promise that yields the netlify data.
-        return fetch(netlify_url).then(response => response.json());
+      // Return a promise that yields the netlify data.
+      return fetch(netlify_url).then(response => response.json());
       }
 
       // Fetch CSV (data1) from Datamall.
@@ -90,58 +90,66 @@ ui <- fluidPage(
 
       // Fetch JSON data (data2 & data3) from BusRouter.
       function fetch_busrouter() {
-        var json_urls = [
-          'https://data.busrouter.sg/v1/services.json',
-          'https://data.busrouter.sg/v1/stops.json'
-    ];
-    return Promise.all(
-      json_urls.map(function(url) {
-        return fetch(url).then(function(response) {
-          if (!response.ok) {
-            throw new Error('Network response not ok for ' + url);
-          }
-          return response.json();
-        });
-      })
-    ).then(function(jsonArray) {
-      return { data2: jsonArray[0], data3: jsonArray[1] };
-    });
-      }
+      var json_urls = [
+        'https://data.busrouter.sg/v1/services.json',
+        'https://data.busrouter.sg/v1/stops.json'
+      ];
+      return Promise.all(
+        json_urls.map(function(url) {
+          return fetch(url).then(function(response) {
+            if (!response.ok) {
+              throw new Error('Network response not ok for ' + url);
+            }
+            return response.json();
+          });
+        })
+      ).then(function(jsonArray) {
+        return { data2: jsonArray[0], data3: jsonArray[1] };
+      });
+        }
   
-  // ---- Master Function to Chain All Requests ----
-  function start_data_fetch(params) {
-    fetch_netlify(params)
-      .then(function(netlify_data) {
-        // Kick off both CSV and BusRouter (JSON) fetches in parallel.
-        return Promise.all([
-          Promise.resolve(netlify_data), // preserve the netlify data
-          fetch_datamall(params),
-          fetch_busrouter()
-        ]);
-      })
-      .then(function(results) {
-        var netlify_data = results[0];  // from Netlify
-        var data1_content = results[1];   // CSV (data1)
-        var data2_3_content = results[2];   // { data2, data3 }
-        
-            // Combine all three sets of data.
-            var final_data = {
-              data1: data1_content,
-              data2: data2_3_content.data2,
-              data3: data2_3_content.data3
-          };
-            // Send the final aggregated data to R.
-            Shiny.setInputValue('final_data', final_data);
+      // Combining Netlify and Datamall imports
+      function start_csv_fetch(params) {
+        fetch_netlify(params)
+          .then(function(netlify_data) {
+            return Promise.all([
+              fetch_datamall(params),
+            ]);
           })
-          .catch(function(err) {
-          console.error('Error in processing data chain:', err);
+          .then(function(data1_result) {
+            var data1_content = dataa1_result[1];
+        
+            var csv_data = {
+              data1: data1_content,
+            };
+            Shiny.setInputValue('csv_data', csv_data);
+          })
+        .catch(function(err) {
+        console.error('Error in CSV fetch chain:', err);
+        document.getElementById('upload_conf').innerHTML = '<span style=\"color:#BB0000; font-weight:bold;\">' + err + '</span>';
+        });
+      }
+      // Busrouter imports
+      function start_json_fetch() {
+        fetch_busrouter()
+          .then(function(data2_3_result) {
+            var json_data = {
+              data2: data2_3_result.data2,
+              data3: data2_3_result.data3
+            };
+            Shiny.setInputValue('json_data_in', json_data);
+          })
+        .catch(function(err) {
+          console.error('Error in JSON fetch chain:', err);
           document.getElementById('upload_conf').innerHTML = '<span style=\"color:#BB0000; font-weight:bold;\">' + err + '</span>';
           });
-     }
-      // ---- Custom Message Handler to Trigger the Chain ----
-      // R will send a message with name 'start_data_fetch' and parameters
-      Shiny.addCustomMessageHandler('start_data_fetch', function(params) {
-        start_data_fetch(params);
+      }
+      // Custom Message Handlers
+      Shiny.addCustomMessageHandler('start_csv_fetch', function(params) {
+        start_csv_fetch(params);
+      });
+      Shiny.addCustomMessageHandler('start_json_fetch', function(params) {
+        start_json_fetch(params);
       });
     "))
   ),
@@ -242,6 +250,10 @@ server <- function(input, output, session) {
     unlink(session_temp_dir, recursive = TRUE)
   })
   
+  normalise_json <- function(json) {
+    jsonlite::fromJSON(jsonlite::toJSON(json), simplifyVector = TRUE)
+  }
+  
   options(shiny.maxRequestSize=900*1024^2)
   
   svc <- reactive({input$svc_in})
@@ -258,6 +270,10 @@ server <- function(input, output, session) {
   day_filter <- reactive(input$day_filter)
   time_since <- reactive(input$time_since)
   time_until <- reactive(input$time_until)
+  json_result <- reactive({
+    req(input$json_data_in)
+    normalise_json(input$json_data_in)
+  })
   
   interval2hours <- function(start, end) {
     start <- as.numeric(start)
@@ -285,7 +301,7 @@ server <- function(input, output, session) {
     }
   })
 
-  data_fetch <- eventReactive(input$import, {
+  csv_fetch <- eventReactive(input$import, {
     list(
       year = input$year_in,
       month = input$month_in,
@@ -293,22 +309,25 @@ server <- function(input, output, session) {
     )
   })
   
-  observeEvent(data_fetch(), {
-    session$sendCustomMessage("start_data_fetch", data_fetch())
+  observeEvent(csv_fetch(), {
+    session$sendCustomMessage("start_csv_fetch", csv_fetch())
   })
   
-  observeEvent(input$final_data$data1, {
+  observeEvent(input$data1_data$data1, {
     pre_data1 <- read.csv(text = input$data1_data, colClasses = c("ORIGIN_PT_CODE" = "character", "DESTINATION_PT_CODE" = "character"))
     data1(pre_data1)
   })
   
   result <- eventReactive(input$generate, {
     if (is.null(data1())) {
-      stop("<span style='color:#BB0000; font-weight:bold;'>You need to upload something, if not what do you wanna see?!")
+      stop("You need to upload something, if not what do you wanna see?!")
     }
+    session$sendCustomMessage("start_json_fetch", list())
     data2_path <- file.path(session_temp_dir, "services.json")
     data3_path <- file.path(session_temp_dir, "stops.json")
-    data3 <- input$json_data$data3
+    json_data <- req(json_result())
+    data2 <- json_data$data2
+    data3 <- json_data$data3
     svc2 <- as.character(svc())
     dir2 <- as.numeric(dir())
     year2 <- as.character(year())
