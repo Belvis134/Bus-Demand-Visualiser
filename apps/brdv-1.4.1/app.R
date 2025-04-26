@@ -10,6 +10,7 @@ print("VVV All error messages from the app are below this line VVV")
 ui <- fluidPage(
   
   tags$head(
+    tags$title("Bus Route Demand Visualiser 1.4.1"),
     tags$style(HTML("
       body {
         background-color: #3F3F3F;
@@ -475,7 +476,7 @@ server <- function(input, output, session) {
       } else {
         paste(stop_names[2:nrow(stop_names)-1,1])
       }
-      img_dims <- list(width = 40 * ncol(dataod2h) + 400, height = 23 * nrow(dataod2h) + 140)
+      img_dims <- list(width = 60 * ncol(dataod2h) + 600, height = 34.5 * nrow(dataod2h) + 210)
       img <- Heatmap(dataod2h,
         name = paste("O-D matrix (en-route)\n",data1()$YEAR_MONTH[[1]], "\n",day_type," Demand\n\nService ",svc2,"\n",dir_graph,"\n",terminus," Bound\n",sep = ""),
         show_column_dend = FALSE,
@@ -498,19 +499,19 @@ server <- function(input, output, session) {
         cluster_columns = FALSE,
         row_order = stop_cur3b,
         column_order = stop_cur3a, 
-        row_names_gp = gpar(fontsize = pmin(ncol(dataod2h) / 3 + 9, 15), just = "right"),
-        column_names_gp = gpar(fontsize = pmin(ncol(dataod2h) / 3 + 9, 15)),
-        row_title_gp = gpar(fontsize = pmin(ncol(dataod2h) / 3 + 12, 25), just = "left"),
-        column_title_gp = gpar(fontsize = pmin(ncol(dataod2h) / 3 + 12, 25)),
+        row_names_gp = gpar(fontsize = pmin(ncol(dataod2h) / 2 + 13.5, 22.5), just = "right"),
+        column_names_gp = gpar(fontsize = pmin(ncol(dataod2h) / 2 + 13.5, 22.5)),
+        row_title_gp = gpar(fontsize = pmin(ncol(dataod2h) / 2 + 18, 37.5), just = "left"),
+        column_title_gp = gpar(fontsize = pmin(ncol(dataod2h) / 2 + 18, 37.5)),
         row_names_max_width = unit(max_length, "cm"),
         column_names_max_height = unit(max_length, "cm"),
-        heatmap_legend_param = list(labels_gp = gpar(fontsize = pmin(ncol(dataod2h) / 3 + 9, 18)), legend_height = unit(pmin(nrow(dataod2h) / 4 + 1, 8), "cm"), at = c(0, 300, 1500, 6000, 30000, 99000), legend_width = unit(2, "cm"), color_bar = "continuous", title_gp = gpar(fontsize = pmin(ncol(dataod2h) / 3 + 9, 18), fontface = 'bold'), break_dist = 1),
+        heatmap_legend_param = list(labels_gp = gpar(fontsize = pmin(ncol(dataod2h) / 2 + 13.5, 27)), legend_height = unit(3 * pmin(nrow(dataod2h) / 8 + 1.5, 12), "cm"), at = c(0, 300, 1500, 6000, 30000, 99000), legend_width = unit(3, "cm"), color_bar = "continuous", title_gp = gpar(fontsize = pmin(ncol(dataod2h) / 2 + 13.5, 27), fontface = 'bold'), break_dist = 1.5),
         cell_fun = function(j, i, x, y, width, height, fill) {
           if(dataod2h[i, j] > 5000){
-            grid.text(sprintf("%.0f", dataod2h[i, j]), x, y, gp = gpar(fontsize = 13, col = "white"))
+            grid.text(sprintf("%.0f", dataod2h[i, j]), x, y, gp = gpar(fontsize = 19.5, col = "white"))
           }
           else if(dataod2h[i, j] > 29){
-            grid.text(sprintf("%.0f", dataod2h[i, j]), x, y, gp = gpar(fontsize = 14))
+            grid.text(sprintf("%.0f", dataod2h[i, j]), x, y, gp = gpar(fontsize = 21))
           }
         },
         rect_gp = gpar(col = "black", lwd = 0.2))
@@ -554,7 +555,7 @@ server <- function(input, output, session) {
       dataod3 <- as.matrix(dataod3)
       dataod3a <- as.matrix(dataod3a)
       cols = colorRamp2(c(0, 1, 30, 300, 1500, 6000, 30000, 99000), c("gray60","white","white", "yellow", "orange", "red", "darkred","black"))
-      img_dims <- list(width = 520, height = 23 * nrow(dataod3) + 100)
+      img_dims <- list(width = 780, height = 34.5 * nrow(dataod3) + 150)
       img <- Heatmap(dataod3,
         name = paste(day_type, "Demand,", time_period),
         show_column_dend = FALSE,
@@ -569,12 +570,12 @@ server <- function(input, output, session) {
         column_labels = c("Origin", "Destination", "Demand"),
         col = cols,
         na_col = "gray60",
-        column_gap = unit(2, "mm"),
+        column_gap = unit(3, "mm"),
         cluster_rows = FALSE,
         cluster_columns = FALSE,
-        column_names_gp = gpar(fontsize = 15),
-        column_title_gp = gpar(fontsize = 25),
-        heatmap_legend_param = list(labels_gp = gpar(fontsize = 12), legend_width = unit(10, "cm"), legend_direction = "horizontal", at = c(0, 300, 1500, 6000, 30000, 99000), legend_width = unit(2, "cm"), color_bar = "continuous", break_dist = 1, title_position = "topcenter", heatmap_legend_side = "top", title_gp = gpar(fontsize = 12, fontface = "bold")),
+        column_names_gp = gpar(fontsize = 22.5),
+        column_title_gp = gpar(fontsize = 37.5),
+        heatmap_legend_param = list(labels_gp = gpar(fontsize = 18), legend_width = unit(15, "cm"), legend_direction = "horizontal", at = c(0, 300, 1500, 6000, 30000, 99000), legend_width = unit(3, "cm"), color_bar = "continuous", break_dist = 1, title_position = "topcenter", heatmap_legend_side = "top", title_gp = gpar(fontsize = 18, fontface = "bold")),
         cell_fun = function(j, i, x, y, width, height, fill) {
           if(j %in% c(1, 2)) {
             # Draw a white background covering the cell.
@@ -583,17 +584,17 @@ server <- function(input, output, session) {
               gp = gpar(fill = "white", col = "black", lwd = 0.2)
             )
             if (input$stop_names2) {
-              grid.text(sprintf("%s\n%s", dataod3[i, j], dataod3a[i, j]), x, y, gp = gpar(fontsize = 11, col = "black"))
+              grid.text(sprintf("%s\n%s", dataod3[i, j], dataod3a[i, j]), x, y, gp = gpar(fontsize = 16.5, col = "black"))
             } else {
-              grid.text(sprintf("%s", dataod3[i, j]), x, y, gp = gpar(fontsize = 15, col = "black"))
+              grid.text(sprintf("%s", dataod3[i, j]), x, y, gp = gpar(fontsize = 22.5, col = "black"))
             }
           }
           if (j ==3) {
             if(dataod3[i, j] > 7000){
-              grid.text(sprintf("%.0f", dataod3[i, j]), x, y, gp = gpar(fontsize = 15, col = "white"))
+              grid.text(sprintf("%.0f", dataod3[i, j]), x, y, gp = gpar(fontsize = 22.5, col = "white"))
             }
             else if(dataod3[i, j] >= 0){
-              grid.text(sprintf("%.0f", dataod3[i, j]), x, y, gp = gpar(fontsize = 15))
+              grid.text(sprintf("%.0f", dataod3[i, j]), x, y, gp = gpar(fontsize = 22.5))
             }
           }
         },
@@ -605,8 +606,8 @@ server <- function(input, output, session) {
     req(result())
   
     # Retrieve dimensions
-    img_width  <- 1.88 * result()$img_dims$width
-    img_height <- 1.88 * result()$img_dims$height
+    img_width  <- result()$img_dims$width
+    img_height <- result()$img_dims$height
     
     # Create a temporary PNG file
     temp_file <- tempfile(fileext = ".png")
