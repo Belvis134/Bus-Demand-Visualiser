@@ -177,7 +177,7 @@ ui <- fluidPage(
     "))
   ),
   
-  titlePanel(tags$p(style = "color: white; text-align: center", "Bus Route Demand Visualiser 1.4.1")),
+  titlePanel(tags$p(style = "color: white; text-align: center", "Bus Route Demand Visualiser 1.2.2")),
   sidebarLayout(
     sidebarPanel(
       width = 5,
