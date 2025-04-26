@@ -6,6 +6,7 @@ suppressPackageStartupMessages(library(htmltools))
 suppressPackageStartupMessages(library(dplyr))
 suppressPackageStartupMessages(library(tidyr))
 suppressPackageStartupMessages(library(shinythemes))
+suppressPackageStartupMessages(library(stringr))
 print("VVV All error messages from the app are below this line VVV")
 
 ui <- fluidPage(
@@ -123,7 +124,7 @@ ui <- fluidPage(
             ]);
           })
           .then(function(data1_result) {
-            var data1_content = dataa1_result[1];
+            var data1_content = data1_result[1];
         
             var csv_data = {
               data1: data1_content,
@@ -454,7 +455,6 @@ server <- function(input, output, session) {
       stop_cur3b <- stop_cur2[2:V]
       dataod2e <- as.matrix(dataod2c)
       dataod2e <- dataod2e[,-1]
-      ncol(dataod2e)
       if (ncol(dataod2e)!=(V-1)){
         dataod2e <- dataod2e[,-ncol(dataod2e)]
       }
