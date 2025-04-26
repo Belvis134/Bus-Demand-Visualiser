@@ -255,7 +255,7 @@ ui <- fluidPage(
     ),
     mainPanel(
       htmlOutput("upload_conf2"),
-      plotOutput("result_out", inline = T)
+      imageOutput("result_out", inline = T)
     )
   )
 )
@@ -601,35 +601,46 @@ server <- function(input, output, session) {
       }
       list(img = img, img_dims = img_dims)
   })
-  output$result_out <- renderPlot({
+  output$result_out <- renderImage({
     req(result())
     
-    # Clear any lingering graphics devices
-    while (dev.cur() > 1L) { dev.off() }
-    Sys.sleep(0.2)  # Allow a short pause if needed
+    # Retrieve dimensions from your reactive object:
+    width  <- as.numeric(result()$img_dims$width)
+    height <- as.numeric(result()$img_dims$height)
     
-    # Start a new grid page
+    # Create a temporary PNG file
+    tempFile <- tempfile(fileext = ".png")
+    
+    # Close any open graphic devices before opening a new PNG device
+    while (dev.cur() > 1L) {
+      dev.off()
+    }
+    
+    # Open a new PNG device with specified dimensions and resolution.
+    # (Adjust 'res' if you need a different DPI.)
+    png(filename = tempFile, width = width, height = height, res = 96)
+    
+    # Immediately clear the device by starting a new page
     grid::grid.newpage()
     
-    # Wrap drawing in tryCatch for debugging
-    tryCatch({
-      if (identical(spec_stops(), FALSE)) {
-        draw(result()$img)
-      } else {
-        draw(result()$img, heatmap_legend_side = "top")
-      }
-      message("Heatmap drawn successfully")
-    }, error = function(e) {
-      message("Error drawing heatmap: ", e$message)
-    })
-  },
-  width = function() {
-    req(result())
-    result()$img_dims$width
-  },
-  height = function() {
-    req(result())
-    result()$img_dims$height
+    # Draw the heatmap with the appropriate parameters:
+    if (identical(spec_stops(), FALSE)) {
+      draw(result()$img)
+    } else {
+      draw(result()$img, heatmap_legend_side = "top")
+    }
+    
+    # Close the device to finalize the image file
+    dev.off()
+    
+    # Return a list with the image details for Shiny
+    list(
+      src = tempFile,
+      contentType = "image/png",
+      width = width,
+      height = height,
+      alt = "Heatmap"
+    )
   })
   output$upload_conf <- renderText({HTML(conf_msg())})
   output$upload_conf2 <- renderText({HTML(conf_msg2())})
