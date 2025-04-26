@@ -26,94 +26,94 @@ ui <- fluidPage(
     tags$script(HTML("
       // Fetch data from the Netlify proxy.
       function fetch_netlify(params) {
-      const netlify_url = 'https://brdv.netlify.app/.netlify/functions/datamall_proxy?year='
-                        + params.year + '&month=' + params.month + '&account_key=' + params.account_key;
-      // Return a promise that yields the netlify data.
-      return fetch(netlify_url).then(response => response.json());
+        const netlify_url = 'https://brdv.netlify.app/.netlify/functions/datamall_proxy?year='
+                          + params.year + '&month=' + params.month + '&account_key=' + params.account_key;
+        // Return a promise that yields the netlify data.
+        return fetch(netlify_url).then(response => response.json());
       }
-
+  
       // Fetch CSV (data1) from Datamall.
       function fetch_datamall(params) {
-        return new Promise(function(resolve, reject) {
-          var year = params.year;
-          var month = params.month;
-          var account_key = params.account_key;
-
-      // Build the URL for the Datamall API call.
-      const data1_params = new URLSearchParams({ Date: year + month });
-      const data1_url = 'http://datamall2.mytransport.sg/ltaodataservice/PV/ODBus?' + data1_params.toString();
-      
-      fetch(data1_url, {
-        method: 'GET',
-        headers: {
-          'AccountKey': account_key,
-          'accept': 'application/json'
-        }
-      })
-      .then(response => response.json())
-      .then(csvJson => {
-        var link = (csvJson.value && csvJson.value[0]) ? csvJson.value[0].Link : null;
-        if (link) {
-             // Fetch the ZIP file pointed to by the link.
-             fetch(link)
-              .then(r => r.blob())
-              .then(blob => {
-               var reader = new FileReader();
-                reader.onload = function(e) {
-                 var data1_content = e.target.result;
-                  // Optionally update a status element:
-                  document.getElementById('upload_conf').innerHTML = '<span style=\"color:#00DD00; font-weight:bold;\">File import successful!</span>';
-                  resolve(data1_content);
-                };
-                reader.onerror = function(e) {
-                  reject('Error reading ZIP blob: ' + e);
-                };
-                reader.readAsText(blob);
-              })
-              .catch(err => {
-                console.error('Error fetching ZIP file:', err);
-                document.getElementById('upload_conf').innerHTML = '<span style=\"color:#BB0000; font-weight:bold;\">Error fetching CSV ZIP.</span>';
-                reject(err);
-              });
-            } else {
-              document.getElementById('upload_conf').innerHTML = '<span style=\"color:#BB0000; font-weight:bold;\">You have reached the rate limit. Try again after a while.</span>';
-              reject('Rate limit reached or no link provided.');
-            }
-          })
-          .catch(err => {
-            console.error('Error fetching Datamall JSON:', err);
-            document.getElementById('upload_conf').innerHTML = '<span style=\"color:#BB0000; font-weight:bold;\">Error fetching CSV data.</span>';
-            reject(err);
+          return new Promise(function(resolve, reject) {
+            var year = params.year;
+            var month = params.month;
+            var account_key = params.account_key;
+  
+        // Build the URL for the Datamall API call.
+        const data1_params = new URLSearchParams({ Date: year + month });
+        const data1_url = 'http://datamall2.mytransport.sg/ltaodataservice/PV/ODBus?' + data1_params.toString();
+        
+        fetch(data1_url, {
+          method: 'GET',
+          headers: {
+            'AccountKey': account_key,
+            'accept': 'application/json'
+          }
+        })
+        .then(response => response.json())
+        .then(csvJson => {
+          var link = (csvJson.value && csvJson.value[0]) ? csvJson.value[0].Link : null;
+          if (link) {
+               // Fetch the ZIP file pointed to by the link.
+               fetch(link)
+                .then(r => r.blob())
+                .then(blob => {
+                 var reader = new FileReader();
+                  reader.onload = function(e) {
+                   var data1_content = e.target.result;
+                    // Optionally update a status element:
+                    document.getElementById('upload_conf').innerHTML = '<span style=\"color:#00DD00; font-weight:bold;\">File import successful!</span>';
+                    resolve(data1_content);
+                  };
+                  reader.onerror = function(e) {
+                    reject('Error reading ZIP blob: ' + e);
+                  };
+                  reader.readAsText(blob);
+                })
+                .catch(err => {
+                  console.error('Error fetching ZIP file:', err);
+                  document.getElementById('upload_conf').innerHTML = '<span style=\"color:#BB0000; font-weight:bold;\">Error fetching CSV ZIP.</span>';
+                  reject(err);
+                });
+              } else {
+                document.getElementById('upload_conf').innerHTML = '<span style=\"color:#BB0000; font-weight:bold;\">You have reached the rate limit. Try again after a while.</span>';
+                reject('Rate limit reached or no link provided.');
+              }
+            })
+            .catch(err => {
+              console.error('Error fetching Datamall JSON:', err);
+              document.getElementById('upload_conf').innerHTML = '<span style=\"color:#BB0000; font-weight:bold;\">Error fetching CSV data.</span>';
+              reject(err);
+            });
           });
-        });
       }
-
+  
       // Fetch JSON data (data2 & data3) from BusRouter.
       function fetch_busrouter() {
-      var json_urls = [
-        'https://data.busrouter.sg/v1/services.json',
-        'https://data.busrouter.sg/v1/stops.json'
-      ];
-      return Promise.all(
-        json_urls.map(function(url) {
-          return fetch(url).then(function(response) {
-            if (!response.ok) {
-              throw new Error('Network response not ok for ' + url);
-            }
-            return response.json();
-          });
-        })
-      ).then(function(jsonArray) {
-        return { data2: jsonArray[0], data3: jsonArray[1] };
-      });
-        }
-  
+        var json_urls = [
+          'https://data.busrouter.sg/v1/services.json',
+          'https://data.busrouter.sg/v1/stops.json'
+        ];
+        return Promise.all(
+          json_urls.map(function(url) {
+            return fetch(url).then(function(response) {
+              if (!response.ok) {
+                throw new Error('Network response not ok for ' + url);
+              }
+              return response.json();
+            });
+          })
+        ).then(function(jsonArray) {
+          return { data2: jsonArray[0], data3: jsonArray[1] };
+        });
+          }
+    
       // Combining Netlify and Datamall imports
       function start_csv_fetch(params) {
         fetch_netlify(params)
           .then(function(netlify_data) {
             return Promise.all([
-              fetch_datamall(params),
+             fetch_datamall(params),
             ]);
           })
           .then(function(data1_result) {
@@ -125,10 +125,11 @@ ui <- fluidPage(
             Shiny.setInputValue('csv_data', csv_data);
           })
         .catch(function(err) {
-        console.error('Error in CSV fetch chain:', err);
-        document.getElementById('upload_conf').innerHTML = '<span style=\"color:#BB0000; font-weight:bold;\">' + err + '</span>';
-        });
-      }
+          console.error('Error in CSV fetch chain:', err);
+          document.getElementById('upload_conf').innerHTML = '<span style=\"color:#BB0000; font-weight:bold;\">' + err + '</span>';
+          });
+        }
+      
       // Busrouter imports
       function start_json_fetch() {
         fetch_busrouter()
@@ -139,22 +140,34 @@ ui <- fluidPage(
             };
             Shiny.setInputValue('json_data_in', json_data);
           })
-        .catch(function(err) {
-          console.error('Error in JSON fetch chain:', err);
-          document.getElementById('upload_conf').innerHTML = '<span style=\"color:#BB0000; font-weight:bold;\">' + err + '</span>';
-          });
-      }
+          .catch(function(err) {
+            console.error('Error in JSON fetch chain:', err);
+            document.getElementById('upload_conf').innerHTML = '<span style=\"color:#BB0000; font-weight:bold;\">' + err + '</span>';
+            });
+        }
       // Custom Message Handlers
       Shiny.addCustomMessageHandler('start_csv_fetch', function(params) {
         start_csv_fetch(params);
       });
-      Shiny.addCustomMessageHandler('start_json_fetch', function(params) {
-        start_json_fetch(params);
+      Shiny.addCustomMessageHandler('start_json_fetch', function() {
+        start_json_fetch();
       });
-      
-      var script = document.createElement('script');
-      script.src = 'app.js?v=' + new Date().getTime(); // Forces a fresh load
-      document.head.appendChild(script);
+
+      // Clear cache upon refresh
+      window.onbeforeunload = function() {
+        // Clear session storage
+        sessionStorage.clear();
+        // Clear local storage (or specific cache keys)
+        localStorage.clear();
+        // Clear caches created via the Cache API
+        if ('caches' in window) {
+          caches.keys().then(function(names) {
+            names.forEach(function(name) {
+              caches.delete(name);
+            });
+          });
+        }
+      };
     "))
   ),
   
@@ -241,8 +254,7 @@ ui <- fluidPage(
     ),
     mainPanel(
       htmlOutput("upload_conf2"),
-      plotOutput("result_out", inline = T),
-      plotOutput("test_plot", inline = T)
+      plotOutput("result_out", inline = T)
     )
   )
 )
@@ -620,9 +632,6 @@ server <- function(input, output, session) {
     })
   output$upload_conf <- renderText({HTML(conf_msg())})
   output$upload_conf2 <- renderText({HTML(conf_msg2())})
-  output$test_plot <- renderPlot({
-    plot(1:10, main = "Simple Base R Plot")
-  })
 }
 
 shinyApp(ui, server)
