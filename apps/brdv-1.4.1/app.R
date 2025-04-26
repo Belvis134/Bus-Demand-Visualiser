@@ -598,8 +598,10 @@ server <- function(input, output, session) {
   output$result_out <- renderPlot({
     req(result())
     if (identical(spec_stops(), F)) {
+      grid::grid.newpage() 
       draw(result()$img)
     } else {
+      grid::grid.newpage() 
       draw(result()$img, heatmap_legend_side = "top")
     }
   }, width = function() {
