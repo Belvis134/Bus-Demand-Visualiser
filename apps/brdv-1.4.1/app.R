@@ -11,13 +11,6 @@ print("VVV All error messages from the app are below this line VVV")
 ui <- fluidPage(
   
   tags$head(
-    tags$title("Bus Route Demand Visualiser 1.4.1"),
-    tags$link(rel = "icon", type = "image/png", href = "stc-icon.png"),
-    tags$script(HTML("
-    window.onload = function() {
-      document.title = 'Bus Route Demand Visualiser 1.4.1';
-    };
-    ")),
     tags$style(HTML("
       body {
         background-color: #3F3F3F;
