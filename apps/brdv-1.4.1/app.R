@@ -155,7 +155,7 @@ ui <- fluidPage(
       });
 
       // Clear cache upon refresh
-      window.onbeforeunload = function() {
+      window.onbeforeunload = function(event) {
         // Clear session storage
         sessionStorage.clear();
         // Clear local storage (or specific cache keys)
@@ -255,18 +255,12 @@ ui <- fluidPage(
     ),
     mainPanel(
       htmlOutput("upload_conf2"),
-      plotOutput("result_out", inline = T)
+      imageOutput("result_out", inline = T)
     )
   )
 )
 
 server <- function(input, output, session) {
-  
-  session_temp_dir <- tempfile("session_")
-  dir.create(session_temp_dir)
-  session$onSessionEnded(function() {
-    unlink(session_temp_dir, recursive = TRUE)
-  })
   
   normalise_json <- function(json) {
     jsonlite::fromJSON(jsonlite::toJSON(json), simplifyVector = TRUE)
@@ -341,8 +335,6 @@ server <- function(input, output, session) {
       stop("You need to upload something, if not what do you wanna see?!")
     }
     session$sendCustomMessage("start_json_fetch", list())
-    data2_path <- file.path(session_temp_dir, "services.json")
-    data3_path <- file.path(session_temp_dir, "stops.json")
     json_data <- req(json_result())
     data2 <- json_data$data2
     data3 <- json_data$data3
@@ -609,26 +601,39 @@ server <- function(input, output, session) {
       }
       list(img = img, img_dims = img_dims)
   })
-  output$result_out <- renderPlot({
+  output$result_out <- renderImage({
     req(result())
-    while (dev.cur() > 1L) {dev.off()}
+  
+    temp_img <- tempfile(fileext = ".png")
+    png(
+      filename = temp_img,
+      width = result()$img_dims$width,
+      height = result()$img_dims$height,
+      res = 96  # adjust resolution as needed
+    )
+    
+    # Optionally, clear any previous graphics device state
+    while (dev.cur() > 1L) { dev.off() }
     Sys.sleep(0.2)
-    if (identical(spec_stops(), F)) {
-      grid.newpage()  # Clear previous graphics
+    grid::grid.newpage()
+    
+    # Draw the heatmap onto the PNG device
+    if (identical(spec_stops(), FALSE)) {
       draw(result()$img)
-      print("Heatmap drawn successfully")
     } else {
-      grid::grid.newpage() 
       draw(result()$img, heatmap_legend_side = "top")
     }
-  }, width = function() {
-      req(result())
-      result()$img_dims$width
-    },
-    height = function() {
-      req(result())
-      result()$img_dims$height
-    })
+    dev.off()
+    
+    # Return a list with image details for Shiny
+    list(
+      src = temp_img,
+      contentType = "image/png",
+      width = result()$img_dims$width,
+      height = result()$img_dims$height,
+      alt = "Heatmap"
+    )
+  }, deleteFile = TRUE)
   output$upload_conf <- renderText({HTML(conf_msg())})
   output$upload_conf2 <- renderText({HTML(conf_msg2())})
 }
