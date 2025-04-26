@@ -610,14 +610,12 @@ server <- function(input, output, session) {
   })
   output$result_out <- renderPlot({
     req(result())
+    while (dev.cur() > 1L) {dev.off()}
+    Sys.sleep(0.2)
     if (identical(spec_stops(), F)) {
-      tryCatch({
-        grid::grid.newpage()  # Clear previous graphics
-        ComplexHeatmap::draw(result()$img)
-        print("Heatmap drawn successfully")
-      }, error = function(e) {
-        print(paste("Error in renderPlot:", e$message))
-      })
+      grid.newpage()  # Clear previous graphics
+      draw(result()$img)
+      print("Heatmap drawn successfully")
     } else {
       grid::grid.newpage() 
       draw(result()$img, heatmap_legend_side = "top")
