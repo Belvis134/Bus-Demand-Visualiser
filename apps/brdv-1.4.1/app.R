@@ -255,7 +255,7 @@ ui <- fluidPage(
     ),
     mainPanel(
       htmlOutput("upload_conf2"),
-      imageOutput("result_out", inline = T)
+      plotOutput("result_out", inline = T)
     )
   )
 )
@@ -601,39 +601,21 @@ server <- function(input, output, session) {
       }
       list(img = img, img_dims = img_dims)
   })
-  output$result_out <- renderImage({
+  output$result_out <- renderPlot({
     req(result())
-  
-    temp_img <- tempfile(fileext = ".png")
-    png(
-      filename = temp_img,
-      width = result()$img_dims$width,
-      height = result()$img_dims$height,
-      res = 96  # adjust resolution as needed
-    )
-    
-    # Optionally, clear any previous graphics device state
-    while (dev.cur() > 1L) { dev.off() }
-    Sys.sleep(0.2)
-    grid::grid.newpage()
-    
-    # Draw the heatmap onto the PNG device
-    if (identical(spec_stops(), FALSE)) {
+    if (identical(spec_stops(), F)) {
       draw(result()$img)
     } else {
       draw(result()$img, heatmap_legend_side = "top")
     }
-    dev.off()
-    
-    # Return a list with image details for Shiny
-    list(
-      src = temp_img,
-      contentType = "image/png",
-      width = result()$img_dims$width,
-      height = result()$img_dims$height,
-      alt = "Heatmap"
-    )
-  }, deleteFile = TRUE)
+  }, width = function() {
+    req(result())
+    result()$img_dims$width
+  },
+  height = function() {
+    req(result())
+    result()$img_dims$height
+  })
   output$upload_conf <- renderText({HTML(conf_msg())})
   output$upload_conf2 <- renderText({HTML(conf_msg2())})
 }
