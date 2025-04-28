@@ -1,8 +1,7 @@
-const fetch = require('node-fetch');
-// Unzipping is required
-const unzip = require('adm-zip');
-
 exports.handler = async function (event, context) {
+  // Dependencies
+  const { default: fetch } = await import('node-fetch');
+  const unzip = require('adm-zip');
   // Handle preflight OPTIONS request for CORS  
   if (event.httpMethod === "OPTIONS") {
     return {
@@ -88,7 +87,7 @@ exports.handler = async function (event, context) {
     };
 
   } catch (error) {
-    console.error('Error in datamall_csv_proxy:', error);
+    console.error('Error in datamall_proxy:', error);
     return {
       statusCode: 500,
       headers: { "Access-Control-Allow-Origin": "*" },
