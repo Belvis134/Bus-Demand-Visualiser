@@ -1,6 +1,6 @@
 exports.handler = async function (event, context) {
   // Dependencies
-  const { default: fetch } = await import('node-fetch');
+  const fetch = require('node-fetch');
   const unzip = require('adm-zip');
   // Handle preflight OPTIONS request for CORS  
   if (event.httpMethod === "OPTIONS") {

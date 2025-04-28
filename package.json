@@ -22,6 +22,6 @@
   "homepage": "https://github.com/Belvis134/Bus-Route-Demand-Visualiser#readme",
   "dependencies": {
     "adm-zip": "^0.5.16",
-    "node-fetch": "^3.3.2"
+    "node-fetch": "^2.7.0"
   }
 }
