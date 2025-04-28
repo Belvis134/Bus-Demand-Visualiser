@@ -1,0 +1,27 @@
+{
+  "name": "bus-route-demand-visualiser",
+  "version": "1.0.0",
+  "description": "To visualise the demand patterns for various public bus routes across Singapore.",
+  "main": "index.js",
+  "directories": {
+    "doc": "docs"
+  },
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/Belvis134/Bus-Route-Demand-Visualiser.git"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/Belvis134/Bus-Route-Demand-Visualiser/issues"
+  },
+  "homepage": "https://github.com/Belvis134/Bus-Route-Demand-Visualiser#readme",
+  "dependencies": {
+    "adm-zip": "^0.5.16",
+    "node-fetch": "^3.3.2"
+  }
+}
