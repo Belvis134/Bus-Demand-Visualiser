@@ -32,95 +32,36 @@ ui <- fluidPage(
       ")),
     tags$script(HTML("
       document.addEventListener('DOMContentLoaded', function() {
-      // Combined Netlify/Datamall fetch
-      function fetch_datamall(params) {
-
-        // --- Part 1: Fetch Netlify data ---
-        document.getElementById('upload_conf').innerHTML =
-          '<span style=\"color:#40A0E0; font-weight:bold;\">Importing from Datamall, please wait... 0/3</span>';
-        const netlify_url =
-          'https://brdv.netlify.app/.netlify/functions/datamall_proxy?year=' +
-          params.year +
-          '&month=' +
-          params.month +
-          '&account_key=' +
-          params.account_key;
-        const netlify_promise = fetch(netlify_url).then(response => {
+      
+      // Fetch Datamall data via Netlify
+      document.getElementById('upload_conf').innerHTML =
+      '<span style=\"color:#40A0E0; font-weight:bold;\">Importing from Datamall, please wait... 1/3</span>';
+    
+      const csv_proxy_url = 'https://brdv.netlify.app/.netlify/functions/datamall_csv_proxy' +
+        '?year=' + params.year +
+        '&month=' + params.month +
+        '&account_key=' + params.account_key;
+    
+      fetch(csv_proxy_url)
+        .then(response => {
           if (!response.ok) {
-            throw new Error('Netlify response not ok for ' + netlify_url);
+            throw new Error('CSV proxy response not ok for ' + csv_proxy_url);
           }
-          return response.json();
+          return response.text();
+        })
+        .then(function(return_csv_data) {
+          // In this example, we’re wrapping the return value
+          // within an object. Adjust as needed.
+          var csv_data = {
+            data1: return_csv_data[0]
+          };
+          Shiny.setInputValue('csv_data_in', csv_data);
+        })
+        .catch(err => {
+          console.error(err);
+          document.getElementById('upload_conf').innerHTML =
+            '<span style=\"color:#BB0000; font-weight:bold;\">' + err + '</span>';
         });
-
-        // --- Part 2: Fetch Datamall CSV data ---
-        document.getElementById('upload_conf').innerHTML =
-          '<span style=\"color:#40A0E0; font-weight:bold;\">Importing from Datamall, please wait... 1/3</span>';
-        const datamall_promise = new Promise(function (resolve, reject) {
-          const data1_params = new URLSearchParams({ Date: params.year + params.month });
-          const data1_url =
-            'https://datamall2.mytransport.sg/ltaodataservice/PV/ODBus?' + data1_params.toString();
-          fetch(data1_url, {
-            method: 'GET',
-            headers: {
-              'AccountKey': params.account_key,
-              'accept': 'application/json'
-            }
-          })
-            .then(response => {
-              if (!response.ok) {
-                reject('Datamall JSON response not ok for ' + data1_url);
-              }
-              return response.json();
-            })
-            .then(csv_json => {
-              // Extract the link that points to the CSV in a ZIP file.
-              var link = csv_json.value && csv_json.value[0] ? csv_json.value[0].Link : null;
-              if (link) {
-                fetch(link)
-                  .then(r => {
-                    if (!r.ok) {
-                      reject('Error fetching ZIP file from Datamall.');
-                    }
-                    return r.blob();
-                  })
-                  .then(blob => {
-                    var reader = new FileReader();
-                    reader.onload = function (e) {
-                      // e.target.result contains the CSV text.
-                      resolve(e.target.result);
-                    };
-                    reader.onerror = function (e) {
-                      reject('Error reading CSV content.');
-                    };
-                    reader.readAsText(blob);
-                 })
-                  .catch(err => reject(err));
-              } else {
-                reject('You have reached the rate limit. Try again after a while.');
-              }
-            })
-            .catch(err => reject(err));
-        });
-
-        // --- Part 3: Combine results and send to Shiny ---
-        document.getElementById('upload_conf').innerHTML =
-          '<span style=\"color:#40A0E0; font-weight:bold;\">Importing from Datamall, please wait... 2/3</span>';
-        return Promise.all([netlify_promise, datamall_promise])
-          .then(function (results) {
-            var combined_data = {
-              data1: results[1]     // the CSV text
-            };
-            // Send as a JSON string; on the Shiny side, you can extract data1 and use read.csv(text = ...)
-            Shiny.setInputValue('csv_data', JSON.stringify(combined_data));
-            document.getElementById('upload_conf').innerHTML =
-            '<span style=\"color:#00DD00; font-weight:bold;\">File import successful!</span>';
-          })
-          .catch(function (err) {
-            console.error('Error in combined fetch chain:', err);
-            document.getElementById('upload_conf').innerHTML =
-              '<span style=\"color:#BB0000; font-weight:bold;\">' + err + '</span>';
-          });
-      }
   
       // Fetch JSON data (data2 & data3) from BusRouter.
       document.getElementById('result_conf').innerHTML =
@@ -139,12 +80,12 @@ ui <- fluidPage(
               return response.json();
             });
           })
-        ).then(function(json_data) {
-          var combined_data = {
-            data2: json_data[0],
-            data3: json_data[1]
+        ).then(function(return_json_data) {
+          var json_data = {
+            data2: return_json_data[0],
+            data3: return_json_data[1]
           };
-          Shiny.setInputValue('json_data_in', JSON.stringify(combined_data));
+          Shiny.setInputValue('json_data_in', JSON.stringify(json_data));
           //document.getElementById('result_conf').innerHTML =
             //'<span style=\"color:#00DD00; font-weight:bold;\">File import successful!</span>';
         });
