@@ -184,7 +184,7 @@ server <- function(input, output, session) {
       account_key <- "1o+r1yqATGio3Rls/NnQGw=="
     }
     list(
-      date = date,
+      date = date_param,
       account_key = account_key
     )
   })
@@ -543,6 +543,7 @@ server <- function(input, output, session) {
     )
   }, deleteFile = FALSE)
   observe(result())
+  observe()
   output$upload_conf <- renderText({HTML(conf_msg())})
   output$result_conf <- renderText({HTML(conf_msg2())})
 }
