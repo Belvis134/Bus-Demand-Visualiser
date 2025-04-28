@@ -31,71 +31,100 @@ ui <- fluidPage(
       }
       ")),
     tags$script(HTML("
-      // Fetch data from the Netlify proxy.
-      function fetch_netlify(params) {
-        const netlify_url = 'https://brdv.netlify.app/.netlify/functions/datamall_proxy?year='
-                          + params.year + '&month=' + params.month + '&account_key=' + params.account_key;
-        // Return a promise that yields the netlify data.
-        return fetch(netlify_url).then(response => response.json());
-      }
-  
-      // Fetch CSV (data1) from Datamall.
+      document.addEventListener('DOMContentLoaded', function() {
+      // Combined Netlify/Datamall fetch
       function fetch_datamall(params) {
-          return new Promise(function(resolve, reject) {
-            var year = params.year;
-            var month = params.month;
-            var account_key = params.account_key;
-  
-        // Build the URL for the Datamall API call.
-        const data1_params = new URLSearchParams({ Date: year + month });
-        const data1_url = 'http://datamall2.mytransport.sg/ltaodataservice/PV/ODBus?' + data1_params.toString();
-        
-        fetch(data1_url, {
-          method: 'GET',
-          headers: {
-            'AccountKey': account_key,
-            'accept': 'application/json'
+
+        // --- Part 1: Fetch Netlify data ---
+        document.getElementById('upload_conf').innerHTML =
+          '<span style=\"color:#40A0E0; font-weight:bold;\">Importing from Datamall, please wait... 0/3</span>';
+        const netlify_url =
+          'https://brdv.netlify.app/.netlify/functions/datamall_proxy?year=' +
+          params.year +
+          '&month=' +
+          params.month +
+          '&account_key=' +
+          params.account_key;
+        const netlify_promise = fetch(netlify_url).then(response => {
+          if (!response.ok) {
+            throw new Error('Netlify response not ok for ' + netlify_url);
           }
-        })
-        .then(response => response.json())
-        .then(csvJson => {
-          var link = (csvJson.value && csvJson.value[0]) ? csvJson.value[0].Link : null;
-          if (link) {
-               // Fetch the ZIP file pointed to by the link.
-               fetch(link)
-                .then(r => r.blob())
-                .then(blob => {
-                 var reader = new FileReader();
-                  reader.onload = function(e) {
-                   var data1_content = e.target.result;
-                    // Optionally update a status element:
-                    document.getElementById('upload_conf').innerHTML = '<span style=\"color:#00DD00; font-weight:bold;\">File import successful!</span>';
-                    resolve(data1_content);
-                  };
-                  reader.onerror = function(e) {
-                    reject('Error reading ZIP blob: ' + e);
-                  };
-                  reader.readAsText(blob);
-                })
-                .catch(err => {
-                  console.error('Error fetching ZIP file:', err);
-                  document.getElementById('upload_conf').innerHTML = '<span style=\"color:#BB0000; font-weight:bold;\">Error fetching CSV ZIP.</span>';
-                  reject(err);
-                });
+          return response.json();
+        });
+
+        // --- Part 2: Fetch Datamall CSV data ---
+        document.getElementById('upload_conf').innerHTML =
+          '<span style=\"color:#40A0E0; font-weight:bold;\">Importing from Datamall, please wait... 1/3</span>';
+        const datamall_promise = new Promise(function (resolve, reject) {
+          const data1_params = new URLSearchParams({ Date: params.year + params.month });
+          const data1_url =
+            'http://datamall2.mytransport.sg/ltaodataservice/PV/ODBus?' + data1_params.toString();
+          fetch(data1_url, {
+            method: 'GET',
+            headers: {
+              'AccountKey': params.account_key,
+              'accept': 'application/json'
+            }
+          })
+            .then(response => {
+              if (!response.ok) {
+                reject('Datamall JSON response not ok for ' + data1_url);
+              }
+              return response.json();
+            })
+            .then(csv_json => {
+              // Extract the link that points to the CSV in a ZIP file.
+              var link = csv_json.value && csv_json.value[0] ? csv_json.value[0].Link : null;
+              if (link) {
+                fetch(link)
+                  .then(r => {
+                    if (!r.ok) {
+                      reject('Error fetching ZIP file from Datamall.');
+                    }
+                    return r.blob();
+                  })
+                  .then(blob => {
+                    var reader = new FileReader();
+                    reader.onload = function (e) {
+                      // e.target.result contains the CSV text.
+                      resolve(e.target.result);
+                    };
+                    reader.onerror = function (e) {
+                      reject('Error reading CSV content.');
+                    };
+                    reader.readAsText(blob);
+                 })
+                  .catch(err => reject(err));
               } else {
-                document.getElementById('upload_conf').innerHTML = '<span style=\"color:#BB0000; font-weight:bold;\">You have reached the rate limit. Try again after a while.</span>';
-                reject('Rate limit reached or no link provided.');
+                reject('You have reached the rate limit. Try again after a while.');
               }
             })
-            .catch(err => {
-              console.error('Error fetching Datamall JSON:', err);
-              document.getElementById('upload_conf').innerHTML = '<span style=\"color:#BB0000; font-weight:bold;\">Error fetching CSV data.</span>';
-              reject(err);
-            });
+            .catch(err => reject(err));
+        });
+
+        // --- Part 3: Combine results and send to Shiny ---
+        document.getElementById('upload_conf').innerHTML =
+          '<span style=\"color:#40A0E0; font-weight:bold;\">Importing from Datamall, please wait... 2/3</span>';
+        return Promise.all([netlify_promise, datamall_promise])
+          .then(function (results) {
+            var combined_data = {
+              data1: results[1]     // the CSV text
+            };
+            // Send as a JSON string; on the Shiny side, you can extract data1 and use read.csv(text = ...)
+            Shiny.setInputValue('csv_data', JSON.stringify(combined_data));
+            document.getElementById('upload_conf').innerHTML =
+            '<span style=\"color:#00DD00; font-weight:bold;\">File import successful!</span>';
+          })
+          .catch(function (err) {
+            console.error('Error in combined fetch chain:', err);
+            document.getElementById('upload_conf').innerHTML =
+              '<span style=\"color:#BB0000; font-weight:bold;\">' + err + '</span>';
           });
       }
   
       // Fetch JSON data (data2 & data3) from BusRouter.
+      document.getElementById('result_conf').innerHTML =
+        '<span style=\"color:#40A0E0; font-weight:bold;\">Importing from BusRouter, please wait...</span>';
       function fetch_busrouter() {
         var json_urls = [
           'https://data.busrouter.sg/v1/services.json',
@@ -110,58 +139,27 @@ ui <- fluidPage(
               return response.json();
             });
           })
-        ).then(function(jsonArray) {
-          return { data2: jsonArray[0], data3: jsonArray[1] };
+        ).then(function(json_data) {
+          var combined_data = {
+            data2: json_data[0],
+            data3: json_data[1]
+          };
+          Shiny.setInputValue('json_data_in', JSON.stringify(combined_data));
+          //document.getElementById('result_conf').innerHTML =
+            //'<span style=\"color:#00DD00; font-weight:bold;\">File import successful!</span>';
         });
-          }
-    
-      // Combining Netlify and Datamall imports
-      function start_csv_fetch(params) {
-        fetch_netlify(params)
-          .then(function(netlify_data) {
-            return Promise.all([
-             fetch_datamall(params),
-            ]);
-          })
-          .then(function(data1_result) {
-            var data1_content = data1_result[1];
-        
-            var csv_data = {
-              data1: data1_content,
-            };
-            Shiny.setInputValue('csv_data', csv_data);
-          })
-        .catch(function(err) {
-          console.error('Error in CSV fetch chain:', err);
-          document.getElementById('upload_conf').innerHTML = '<span style=\"color:#BB0000; font-weight:bold;\">' + err + '</span>';
-          });
-        }
+      }
       
-      // Busrouter imports
-      function start_json_fetch() {
-        fetch_busrouter()
-          .then(function(data2_3_result) {
-            var json_data = {
-              data2: data2_3_result.data2,
-              data3: data2_3_result.data3
-            };
-            Shiny.setInputValue('json_data_in', json_data);
-          })
-          .catch(function(err) {
-            console.error('Error in JSON fetch chain:', err);
-            document.getElementById('upload_conf').innerHTML = '<span style=\"color:#BB0000; font-weight:bold;\">' + err + '</span>';
-            });
-        }
       // Custom Message Handlers
-      Shiny.addCustomMessageHandler('start_csv_fetch', function(params) {
-        start_csv_fetch(params);
+      Shiny.addCustomMessageHandler('fetch_datamall', function(params) {
+        fetch_datamall(params);
       });
-      Shiny.addCustomMessageHandler('start_json_fetch', function(params) {
-        start_json_fetch(params);
+      Shiny.addCustomMessageHandler('fetch_busrouter', function(params) {
+        fetch_busrouter(params);
       });
 
       // Clear cache upon refresh
-      window.onbeforeunload = function(event) {
+      window.onbeforeunload = function() {
         // Clear session storage
         sessionStorage.clear();
         // Clear local storage (or specific cache keys)
@@ -175,6 +173,7 @@ ui <- fluidPage(
           });
         }
       };
+      })
     "))
   ),
   
@@ -187,14 +186,14 @@ ui <- fluidPage(
       checkboxInput("autoimport", "Import from Datamall", T),
       conditionalPanel(
         condition = "input.autoimport == false",
-        tags$div(tags$h5(strong("Please wait until you receive 'File Upload Successful!'.", class = "red_text"))),
+        tags$div(tags$h5(strong("Please wait until you receive 'File upload successful!'.", class = "red_text"))),
         fileInput("data1_in", "Choose LTA Origin-Destination CSV", width = "500px",
                   accept = c(".csv", ".docx", ".doc"),
         )),
       conditionalPanel(
         condition = "input.autoimport == true",
         tags$div(tags$h5(strong("Put a leading zero in single-digit months, i.e. 01", class = "red_text"))),
-        tags$div(tags$h5(strong("Please wait until you receive 'File Upload Successful!'.", class = "red_text"))),
+        tags$div(tags$h5(strong("Please wait until you receive 'File import successful!'.", class = "red_text"))),
         fluidRow(
           splitLayout(
             paste(" "),
@@ -257,10 +256,10 @@ ui <- fluidPage(
         condition = "input.seespecstops == true",
         checkboxInput("stop_names2", "Display bus stop names in cells", F),
       ),
-      actionButton("generate","Generate Table", width = "120px")
+      actionButton("generate","Generate Table", width = "120px"),
+      htmlOutput("result_conf")
     ),
     mainPanel(
-      htmlOutput("upload_conf2"),
       imageOutput("result_out", inline = T)
     )
   )
@@ -269,7 +268,7 @@ ui <- fluidPage(
 server <- function(input, output, session) {
   
   normalise_json <- function(json) {
-    jsonlite::fromJSON(jsonlite::toJSON(json), simplifyVector = TRUE)
+    fromJSON(json)
   }
   
   options(shiny.maxRequestSize=900*1024^2)
@@ -280,6 +279,7 @@ server <- function(input, output, session) {
   year <- reactive({input$year_in})
   month <- reactive({input$month_in})
   data1 <- reactiveVal(NULL)
+  data2 <- NULL
   conf_msg <- reactiveVal("")
   conf_msg2 <- reactiveVal("")
   sp_ori <- reactive({input$ori_stops})
@@ -288,10 +288,7 @@ server <- function(input, output, session) {
   day_filter <- reactive(input$day_filter)
   time_since <- reactive(input$time_since)
   time_until <- reactive(input$time_until)
-  json_result <- reactive({
-    req(input$json_data_in)
-    normalise_json(input$json_data_in)
-  })
+  fetched_data <- reactiveVal(NULL)
   
   interval2hours <- function(start, end) {
     start <- as.numeric(start)
@@ -309,9 +306,8 @@ server <- function(input, output, session) {
 
   observeEvent(input$data1_in, {
     req(input$data1_in, !input$autoimport)
-    conf_msg("")
     pre_data1 <- read.csv(input$data1_in$datapath, colClasses = c("ORIGIN_PT_CODE" = "character", "DESTINATION_PT_CODE" = "character"))
-    if (!is.null(data)) {
+    if (!is.null(pre_data1)) {
       data1(pre_data1)
       conf_msg("<span style='color:#00DD00; font-weight:bold;'>File upload successful!</span>")
     } else {
@@ -319,7 +315,7 @@ server <- function(input, output, session) {
     }
   })
 
-  csv_fetch <- eventReactive(input$import, {
+  datamall_params <- eventReactive(input$import, {
     list(
       year = input$year_in,
       month = input$month_in,
@@ -327,23 +323,49 @@ server <- function(input, output, session) {
     )
   })
   
-  observeEvent(csv_fetch(), {
-    session$sendCustomMessage("start_csv_fetch", csv_fetch())
+  observeEvent(datamall_params(), {
+    session$sendCustomMessage("fetch_datamall", datamall_params())
   })
   
-  observeEvent(input$data1_data$data1, {
+  observeEvent(input$csv_data$data1, {
     pre_data1 <- read.csv(text = input$data1_data, colClasses = c("ORIGIN_PT_CODE" = "character", "DESTINATION_PT_CODE" = "character"))
     data1(pre_data1)
   })
   
-  result <- eventReactive(input$generate, {
-    if (is.null(data1())) {
-      stop("You need to upload something, if not what do you wanna see?!")
+  observeEvent(input$json_data_in, {
+    # If the JS sends a JSON string, you might want to store it directly.
+    if (is.null(data2)) {
+    fetched_data(input$json_data_in)
     }
-    session$sendCustomMessage("start_json_fetch", list())
-    json_data <- req(json_result())
-    data2 <- json_data$data2
-    data3 <- json_data$data3
+  })
+  
+  observeEvent(input$generate, {
+    # Only send a fetch command if data2 hasn't been set yet.
+    if (is.null(data2)) {
+      # Send the custom message to fetch BusRouter data.
+      session$sendCustomMessage("fetch_busrouter", list())
+      conf_msg2("<span style='color:#40A0E0; font-weight:bold;'>Fetching BusRouter data...</span>")
+      }
+    })
+  
+  result <- eventReactive(list(input$generate, fetched_data()), {
+    req(input$generate)
+    # Check that data1 exists before proceeding.
+    if (is.null(data1())) {
+      tryCatch({
+        conf_msg2(paste0("<span style='color:#BB0000; font-weight:bold;'>You need to upload something, if not what do you wanna see?!</span>"))
+        stop("data1 not defined.")
+      }, error = function(e) {
+        print(e$message)
+        stop("")
+      })
+    }
+    if (is.null(data2)) {
+      req(fetched_data())
+      json_data <- fromJSON(fetched_data())
+      data2 <- json_data$data2
+      data3 <- json_data$data3
+    }
     svc2 <- as.character(svc())
     dir2 <- as.numeric(dir())
     year2 <- as.character(year())
@@ -387,7 +409,13 @@ server <- function(input, output, session) {
       stop_half_opt = svc_half()
       stop_cur <- data2[[svc2]]$routes[[dir2]]
       if (is.null(stop_cur)) {
-        stop("Invalid bus service. Is your bus service withdrawn?")
+        tryCatch({
+          conf_msg2(paste0("<span style='color:#BB0000; font-weight:bold;'>Invalid bus service. Is your bus service withdrawn?</span>"))
+          stop("Invalid bus service.")
+        }, error = function(e) {
+          print(e$message)
+          stop("")
+        })
       }
       terminus <- data3[[(stop_cur[length(stop_cur)])]][[3]]
       is_2way <- length(data2[[svc2]]$routes)
@@ -480,7 +508,7 @@ server <- function(input, output, session) {
       } else {
         paste(stop_names[2:nrow(stop_names)-1,1])
       }
-      img_dims <- list(width = 40 * ncol(dataod2h) + 400, height = 23 * nrow(dataod2h) + 140)
+      img_dims <- list(width = 39 * ncol(dataod2h) + 300, height = 22 * nrow(dataod2h) + 200)
       img <- Heatmap(dataod2h,
         name = paste("O-D matrix (en-route)\n",data1()$YEAR_MONTH[[1]], "\n",day_type," Demand\n\nService ",svc2,"\n",dir_graph,"\n",terminus," Bound\n",sep = ""),
         show_column_dend = FALSE,
@@ -511,10 +539,11 @@ server <- function(input, output, session) {
         column_names_max_height = unit(max_length, "cm"),
         heatmap_legend_param = list(labels_gp = gpar(fontsize = pmin(ncol(dataod2h) / 3 + 9, 18)), legend_height = unit(pmin(nrow(dataod2h) / 4 + 1, 8), "cm"), at = c(0, 300, 1500, 6000, 30000, 99000), legend_width = unit(2, "cm"), color_bar = "continuous", title_gp = gpar(fontsize = pmin(ncol(dataod2h) / 3 + 9, 18), fontface = 'bold'), break_dist = 1),
         cell_fun = function(j, i, x, y, width, height, fill) {
-          if(dataod2h[i, j] > 5000){
+          if(dataod2h[i, j] > 10000){
             grid.text(sprintf("%.0f", dataod2h[i, j]), x, y, gp = gpar(fontsize = 13, col = "white"))
-          }
-          else if(dataod2h[i, j] > 29){
+          } else if (dataod2h[i, j] > 5000) {
+            grid.text(sprintf("%.0f", dataod2h[i, j]), x, y, gp = gpar(fontsize = 14, col = "white"))
+          } else if(dataod2h[i, j] > 29){
             grid.text(sprintf("%.0f", dataod2h[i, j]), x, y, gp = gpar(fontsize = 14))
           }
         },
@@ -525,7 +554,13 @@ server <- function(input, output, session) {
       l_ori <- length(ori_stops[[1]])
       l_dst <- length(dst_stops[[1]])
       if (l_ori != l_dst) {
-        stop("The lengths of your origin stops and destination stops do not match.")
+        tryCatch({
+          conf_msg2(paste0("<span style='color:#BB0000; font-weight:bold;'>The lengths of your origin stops and destination stops do not match.</span>"))
+          stop("Length of origin stops not equal to length of destination stops.")
+        }, error = function(e) {
+          print(e$message)
+          stop("")
+        })
       }
       dataod3 <- data.frame(c(1:l_ori), c(1:l_ori), c(1:l_ori))
       dataod3a <- data.frame(c(1:l_ori), c(1:l_ori))
@@ -541,7 +576,13 @@ server <- function(input, output, session) {
           DESTINATION_PT_CODE %in% dataod3[t, 2] | is.na(DESTINATION_PT_CODE),
           !!filter_day_type, !!filter_time_period))
         if (valid_stops == 0) {
-          stop("Invalid bus stop code(s) detected! Check your codes to see if it's a proper O-D pair, or there's absolutely no one going from A to B.")
+          tryCatch({
+            conf_msg2(paste0("<span style='color:#BB0000; font-weight:bold;'>Invalid bus stop code(s) detected! Check your codes to see if it's a proper O-D pair, or there's absolutely no one going from A to B.</span>"))
+            stop("Invalid stop codes or no demand.")
+          }, error = function(e) {
+            print(e$message)
+            stop("")
+          })
         }
         dataod3[t, 3] <- data1() %>%
           filter(., ORIGIN_PT_CODE == dataod3[t, 1],
@@ -559,7 +600,8 @@ server <- function(input, output, session) {
       dataod3 <- as.matrix(dataod3)
       dataod3a <- as.matrix(dataod3a)
       cols = colorRamp2(c(0, 1, 30, 300, 1500, 6000, 30000, 99000), c("gray60","white","white", "yellow", "orange", "red", "darkred","black"))
-      img_dims <- list(width = 520, height = 23 * nrow(dataod3) + 100)
+      img_dims <- list(width = 520, height = 24 * nrow(dataod3) + 90)
+      conf_msg2("<span style='color:#40A0E0; font-weight:bold;'>Drawing heatmap, please wait...</span>")
       img <- Heatmap(dataod3,
         name = paste(day_type, "Demand,", time_period),
         show_column_dend = FALSE,
@@ -594,7 +636,7 @@ server <- function(input, output, session) {
             }
           }
           if (j ==3) {
-            if(dataod3[i, j] > 7000){
+            if(dataod3[i, j] > 5000){
               grid.text(sprintf("%.0f", dataod3[i, j]), x, y, gp = gpar(fontsize = 15, col = "white"))
             }
             else if(dataod3[i, j] >= 0){
@@ -623,9 +665,13 @@ server <- function(input, output, session) {
     
     # Draw the heatmap
     if (identical(spec_stops(), FALSE)) {
+      req(result())
       draw(result()$img)
+      conf_msg2("<span style='color:#00DD00; font-weight:bold;'>Heatmap successfully drawn!</span>")
     } else {
+      req(result())
       draw(result()$img, heatmap_legend_side = "top")
+      conf_msg2("<span style='color:#00DD00; font-weight:bold;'>Heatmap successfully drawn!</span>")
     }
     dev.off()
     list(
@@ -637,7 +683,7 @@ server <- function(input, output, session) {
     )
   }, deleteFile = FALSE)
   output$upload_conf <- renderText({HTML(conf_msg())})
-  output$upload_conf2 <- renderText({HTML(conf_msg2())})
+  output$result_conf <- renderText({HTML(conf_msg2())})
 }
 
 shinyApp(ui, server)
