@@ -20,6 +20,7 @@ exports.handler = async function (event, context) {
   
   // Use provided account key or fall back to an environment variable
   const AccountKey = account_key ? account_key : process.env.ACCOUNT_KEY;
+  console.log("Incoming account_key:", event.queryStringParameters.account_key);
 
   // Construct the Date parameter: for example, "202503"  
   const date = `${year}${month}`;
