@@ -68,7 +68,8 @@ exports.handler = async function (event, context) {
     }
 
     // Link returns a ZIP file, needs unzipping.
-    const buffer = await csv_response.buffer();
+    const array_buffer = await csv_response.arrayBuffer();
+    const buffer = Buffer.from(array_buffer);
     const zip = new unzip(buffer);
     const zip_entries = zip.getEntries();
     if(zip_entries.length === 0) {
