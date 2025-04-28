@@ -16,13 +16,10 @@ exports.handler = async function (event, context) {
   }
 
   // Extract query parameters sent from the client
-  const { year, month, account_key } = event.queryStringParameters;
+  const { date, account_key } = event.queryStringParameters;
   
   // Use provided account key or fall back to an environment variable
   const AccountKey = account_key ? account_key : process.env.ACCOUNT_KEY;
-
-  // Construct the Date parameter: for example, "202503"  
-  const date = `${year}${month}`;
 
   // Construct the Datamall JSON API URL
   const datamall_url = `https://datamall2.mytransport.sg/ltaodataservice/PV/ODBus?Date=${date}`;
@@ -71,8 +68,7 @@ exports.handler = async function (event, context) {
     }
 
     // Link returns a ZIP file, needs unzipping.
-    const array_buffer = await csv_response.arrayBuffer();
-    const buffer = Buffer.from(array_buffer);
+    const buffer = await csv_response.buffer();
     const zip = new unzip(buffer);
     const zip_entries = zip.getEntries();
     if(zip_entries.length === 0) {

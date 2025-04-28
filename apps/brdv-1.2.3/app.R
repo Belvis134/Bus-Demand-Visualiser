@@ -7,6 +7,7 @@ suppressPackageStartupMessages(library(dplyr))
 suppressPackageStartupMessages(library(tidyr))
 suppressPackageStartupMessages(library(shinythemes))
 suppressPackageStartupMessages(library(stringr))
+suppressPackageStartupMessages(library(shinyWidgets))
 print("VVV All error messages from the app are below this line VVV")
 
 ui <- fluidPage(
@@ -30,83 +31,7 @@ ui <- fluidPage(
         accent-color: #007BFF;
       }
       ")),
-    tags$script(HTML("
-      document.addEventListener('DOMContentLoaded', function() {
-      // Fetch Datamall data via Netlify
-      Shiny.addCustomMessageHandler('fetch_datamall', function(params) {
-        document.getElementById('upload_conf').innerHTML =
-            '<span style=\"color:#40A0E0; font-weight:bold;\">Importing from Datamall, please wait... 1/3</span>';
-        const encoded_account_key = encodeURIComponent(params.account_key);
-        const csv_proxy_url = 'https://brdv.netlify.app/.netlify/functions/datamall_proxy' +
-            '?year=' + params.year +
-            '&month=' + params.month +
-            '&account_key=' + encoded_account_key;
-        fetch(csv_proxy_url)
-            .then(response => {
-                if (!response.ok) {
-                    throw new Error('CSV proxy response not ok for ' + csv_proxy_url);
-                }
-                return response.text();
-            })
-            .then(function(return_csv_data) {
-                // Pass the full CSV text to Shiny.
-                var csv_data = {
-                    data1: return_csv_data
-                };
-                Shiny.setInputValue('csv_data_in', csv_data);
-            })
-            .catch(err => {
-                console.error(err);
-                document.getElementById('upload_conf').innerHTML =
-                    '<span style=\"color:#BB0000; font-weight:bold;\">' + err + '</span>';
-            });
-      });
-  
-      // Fetch JSON data (data2 & data3) from BusRouter.
-      Shiny.addCustomMessageHandler('fetch_busrouter', function(params) {
-        document.getElementById('result_conf').innerHTML =
-        '<span style=\"color:#40A0E0; font-weight:bold;\">Importing from BusRouter, please wait...</span>';
-        var json_urls = [
-          'https://data.busrouter.sg/v1/services.json',
-          'https://data.busrouter.sg/v1/stops.json'
-        ];
-        return Promise.all(
-          json_urls.map(function(url) {
-            return fetch(url).then(function(response) {
-              if (!response.ok) {
-                throw new Error('Network response not ok for ' + url);
-              }
-              return response.json();
-            });
-          })
-        ).then(function(return_json_data) {
-          var json_data = {
-            data2: return_json_data[0],
-            data3: return_json_data[1]
-          };
-          Shiny.setInputValue('json_data_in', JSON.stringify(json_data));
-          //document.getElementById('result_conf').innerHTML =
-            //'<span style=\"color:#00DD00; font-weight:bold;\">File import successful!</span>';
-        });
-      });
-
-      // Clear cache upon refresh
-      window.onbeforeunload = function() {
-        // Clear session storage
-        sessionStorage.clear();
-        // Clear local storage (or specific cache keys)
-        localStorage.clear();
-        // Clear caches created via the Cache API
-        if ('caches' in window) {
-          caches.keys().then(function(names) {
-            names.forEach(function(name) {
-              caches.delete(name);
-            });
-          });
-        }
-      };
-      })
-    "))
+    tags$script(src = "data_importing.js")
   ),
   
   titlePanel(tags$p(style = "color: white; text-align: center", "Bus Route Demand Visualiser 1.2.3")),
@@ -124,16 +49,19 @@ ui <- fluidPage(
         )),
       conditionalPanel(
         condition = "input.autoimport == true",
-        tags$div(tags$h5(strong("Put a leading zero in single-digit months, i.e. 01", class = "red_text"))),
+        checkboxInput("use_own_key","Use your own account key?", F),
+        conditionalPanel(
+          condition = "input.use_own_key == true",
+          textInput("own_key","Your account key",value = NA, width = "500px")
+        ),
         tags$div(tags$h5(strong("Please wait until you receive 'File import successful!'.", class = "red_text"))),
         fluidRow(
           splitLayout(
             paste(" "),
-            textInput("year_in","Select Year", value = NA, width = "80px"),
-            textInput("month_in","Month", value = NA, width = "80px"),
+            airDatepickerInput("date", "Select Date", value = NULL, dateFormat = "yyyy-MM", view = "months", minView = "months", width = "80px", addon = "none", readonly = TRUE, autoClose = TRUE),
             div(class = "import_shift", actionButton("import", "Import", width = "80px")),
             cellWidths = c("10px","80px","80px","80px")
-          ),
+          )
         )
       ),
       htmlOutput("upload_conf"),
@@ -208,8 +136,6 @@ server <- function(input, output, session) {
   svc <- reactive({input$svc_in})
   dir <- reactive({input$dir_in})
   svc_half <- reactive({input$svc_half_in})
-  year <- reactive({input$year_in})
-  month <- reactive({input$month_in})
   data1 <- reactiveVal(NULL)
   data2 <- NULL
   conf_msg <- reactiveVal("")
@@ -248,10 +174,18 @@ server <- function(input, output, session) {
   })
 
   datamall_params <- eventReactive(input$import, {
+    date <- str_split(input$date, "-")
+    year <- date[[1]][[1]]
+    month <- date[[1]][[2]]
+    date_param <- paste0(year, month)
+    if (input$use_own_key) {
+      account_key <- input$own_key
+    } else {
+      account_key <- "1o+r1yqATGio3Rls/NnQGw=="
+    }
     list(
-      year = input$year_in,
-      month = input$month_in,
-      account_key = "1o+r1yqATGio3Rls/NnQGw=="
+      date = date,
+      account_key = account_key
     )
   })
   

@@ -1,5 +1,5 @@
 # Export to docs/ folder to deploy to Github Pages
-req_packages <- c("shiny", "rjson", "ComplexHeatmap", "circlize", "dplyr", "htmltools", "tidyr")
+req_packages <- c("shiny", "rjson", "ComplexHeatmap", "circlize", "dplyr", "htmltools", "tidyr", "shinyWidgets")
 total_packages <- NULL
 for (k in 1:length(req_packages)) {
   pkg <- tools::package_dependencies(req_packages[[k]], recursive = TRUE, db = available.packages())
