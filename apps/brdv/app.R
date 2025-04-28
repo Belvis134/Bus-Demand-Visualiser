@@ -210,7 +210,6 @@ server <- function(input, output, session) {
     if (is.null(data2)) {
       # Send the custom message to fetch BusRouter data.
       session$sendCustomMessage("fetch_busrouter", list())
-      conf_msg2("<span style='color:#40A0E0; font-weight:bold;'>Fetching BusRouter data...</span>")
       }
     })
   
@@ -277,8 +276,7 @@ server <- function(input, output, session) {
           conf_msg2(paste0("<span style='color:#BB0000; font-weight:bold;'>Invalid bus service. Is your bus service withdrawn?</span>"))
           stop("Invalid bus service.")
         }, error = function(e) {
-          print(e$message)
-          stop("")
+          stop(e$message)
         })
       }
       terminus <- data3[[(stop_cur[length(stop_cur)])]][[3]]
@@ -422,8 +420,7 @@ server <- function(input, output, session) {
           conf_msg2(paste0("<span style='color:#BB0000; font-weight:bold;'>The lengths of your origin stops and destination stops do not match.</span>"))
           stop("Length of origin stops not equal to length of destination stops.")
         }, error = function(e) {
-          print(e$message)
-          stop("")
+          stop(e$message)
         })
       }
       dataod3 <- data.frame(c(1:l_ori), c(1:l_ori), c(1:l_ori))
@@ -444,8 +441,7 @@ server <- function(input, output, session) {
             conf_msg2(paste0("<span style='color:#BB0000; font-weight:bold;'>Invalid bus stop code(s) detected! Check your codes to see if it's a proper O-D pair, or there's absolutely no one going from A to B.</span>"))
             stop("Invalid stop codes or no demand.")
           }, error = function(e) {
-            print(e$message)
-            stop("")
+            stop(e$message)
           })
         }
         dataod3[t, 3] <- data1() %>%
@@ -546,6 +542,7 @@ server <- function(input, output, session) {
       alt = "Demand Heatmap"
     )
   }, deleteFile = FALSE)
+  observe(result())
   output$upload_conf <- renderText({HTML(conf_msg())})
   output$result_conf <- renderText({HTML(conf_msg2())})
 }
