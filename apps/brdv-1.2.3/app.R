@@ -32,41 +32,39 @@ ui <- fluidPage(
       ")),
     tags$script(HTML("
       document.addEventListener('DOMContentLoaded', function() {
-      
       // Fetch Datamall data via Netlify
-      document.getElementById('upload_conf').innerHTML =
-      '<span style=\"color:#40A0E0; font-weight:bold;\">Importing from Datamall, please wait... 1/3</span>';
-    
-      const csv_proxy_url = 'https://brdv.netlify.app/.netlify/functions/datamall_csv_proxy' +
-        '?year=' + params.year +
-        '&month=' + params.month +
-        '&account_key=' + params.account_key;
-    
-      fetch(csv_proxy_url)
-        .then(response => {
-          if (!response.ok) {
-            throw new Error('CSV proxy response not ok for ' + csv_proxy_url);
-          }
-          return response.text();
-        })
-        .then(function(return_csv_data) {
-          // In this example, we’re wrapping the return value
-          // within an object. Adjust as needed.
-          var csv_data = {
-            data1: return_csv_data[0]
-          };
-          Shiny.setInputValue('csv_data_in', csv_data);
-        })
-        .catch(err => {
-          console.error(err);
-          document.getElementById('upload_conf').innerHTML =
-            '<span style=\"color:#BB0000; font-weight:bold;\">' + err + '</span>';
-        });
+      Shiny.addCustomMessageHandler('fetch_datamall', function(params) {
+        document.getElementById('upload_conf').innerHTML =
+            '<span style=\"color:#40A0E0; font-weight:bold;\">Importing from Datamall, please wait... 1/3</span>';
+        const csv_proxy_url = 'https://brdv.netlify.app/.netlify/functions/datamall_csv_proxy' +
+            '?year=' + params.year +
+            '&month=' + params.month +
+            '&account_key=' + params.account_key;
+        fetch(csv_proxy_url)
+            .then(response => {
+                if (!response.ok) {
+                    throw new Error('CSV proxy response not ok for ' + csv_proxy_url);
+                }
+                return response.text();
+            })
+            .then(function(return_csv_data) {
+                // Pass the full CSV text to Shiny.
+                var csv_data = {
+                    data1: return_csv_data
+                };
+                Shiny.setInputValue('csv_data_in', csv_data);
+            })
+            .catch(err => {
+                console.error(err);
+                document.getElementById('upload_conf').innerHTML =
+                    '<span style=\"color:#BB0000; font-weight:bold;\">' + err + '</span>';
+            });
+      });
   
       // Fetch JSON data (data2 & data3) from BusRouter.
-      document.getElementById('result_conf').innerHTML =
+      Shiny.addCustomMessageHandler('fetch_busrouter', function(params) {
+        document.getElementById('result_conf').innerHTML =
         '<span style=\"color:#40A0E0; font-weight:bold;\">Importing from BusRouter, please wait...</span>';
-      function fetch_busrouter() {
         var json_urls = [
           'https://data.busrouter.sg/v1/services.json',
           'https://data.busrouter.sg/v1/stops.json'
@@ -89,14 +87,6 @@ ui <- fluidPage(
           //document.getElementById('result_conf').innerHTML =
             //'<span style=\"color:#00DD00; font-weight:bold;\">File import successful!</span>';
         });
-      }
-      
-      // Custom Message Handlers
-      Shiny.addCustomMessageHandler('fetch_datamall', function(params) {
-        fetch_datamall(params);
-      });
-      Shiny.addCustomMessageHandler('fetch_busrouter', function(params) {
-        fetch_busrouter(params);
       });
 
       // Clear cache upon refresh
@@ -309,8 +299,6 @@ server <- function(input, output, session) {
     }
     svc2 <- as.character(svc())
     dir2 <- as.numeric(dir())
-    year2 <- as.character(year())
-    month2 <- as.character(month())
     if (identical(day_filter(), "cmb")) {
       day_type <- "Combined"
     } else if (identical(day_filter(), "wkday")) {
