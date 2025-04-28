@@ -34,7 +34,7 @@ ui <- fluidPage(
     tags$script(src = "data_importing.js")
   ),
   
-  titlePanel(tags$p(style = "color: white; text-align: center", "Bus Route Demand Visualiser 1.2.3")),
+  titlePanel(tags$p(style = "color: white; text-align: center", "Bus Route Demand Visualiser 1.2.4")),
   sidebarLayout(
     sidebarPanel(
       width = 5,
