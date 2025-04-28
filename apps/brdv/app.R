@@ -543,7 +543,6 @@ server <- function(input, output, session) {
     )
   }, deleteFile = FALSE)
   observe(result())
-  observe()
   output$upload_conf <- renderText({HTML(conf_msg())})
   output$result_conf <- renderText({HTML(conf_msg2())})
 }
