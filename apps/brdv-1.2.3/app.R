@@ -36,10 +36,11 @@ ui <- fluidPage(
       Shiny.addCustomMessageHandler('fetch_datamall', function(params) {
         document.getElementById('upload_conf').innerHTML =
             '<span style=\"color:#40A0E0; font-weight:bold;\">Importing from Datamall, please wait... 1/3</span>';
+        const encoded_account_key = encodeURIComponent(params.account_key);
         const csv_proxy_url = 'https://brdv.netlify.app/.netlify/functions/datamall_proxy' +
             '?year=' + params.year +
             '&month=' + params.month +
-            '&account_key=' + params.account_key;
+            '&account_key=' + encoded_account_key;
         fetch(csv_proxy_url)
             .then(response => {
                 if (!response.ok) {
