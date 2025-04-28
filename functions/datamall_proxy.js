@@ -20,13 +20,14 @@ exports.handler = async function (event, context) {
   
   // Use provided account key or fall back to an environment variable
   const AccountKey = account_key ? account_key : process.env.ACCOUNT_KEY;
-  console.log("Incoming account_key:", event.queryStringParameters.account_key);
 
   // Construct the Date parameter: for example, "202503"  
   const date = `${year}${month}`;
 
   // Construct the Datamall JSON API URL
   const datamall_url = `https://datamall2.mytransport.sg/ltaodataservice/PV/ODBus?Date=${date}`;
+  console.log("Datamall URL:", datamall_url);
+  console.log("Using AccountKey:", AccountKey);
 
   try {
     // --- Step 1: Fetch JSON data from Datamall ---
@@ -50,6 +51,7 @@ exports.handler = async function (event, context) {
 
     // --- Step 2: Extract the CSV link from the JSON ---
     const link = (json_data.value && json_data.value[0] && json_data.value[0].Link) || null;
+    console.log("Extracted CSV link:", link);
     if (!link) {
       return {
         statusCode: 400,
