@@ -8,7 +8,7 @@ for (k in 1:length(req_packages)) {
 }
 total_packages <- unique(total_packages)
 total_packages <- c(total_packages, req_packages)
-export_output <- capture.output({shinylive::export(appdir = "apps/brdv-1.2.2", destdir = "docs", packages = total_packages)})
+export_output <- capture.output({shinylive::export(appdir = "apps/brdv-1.2.3", destdir = "docs", packages = total_packages)})
 cat(export_output, sep = "\n")
 index_file <- "docs/index.html"
 html_lines <- readLines(index_file)
