@@ -6,7 +6,7 @@ exports.handler = async function(event, context) {
     const AccountKey = account_key ? account_key : process.env.ACCOUNT_KEY;
   
     // Construct the Datamall API URL.
-    const apiUrl = `http://datamall2.mytransport.sg/ltaodataservice/PV/ODBus?Date=${year}${month}`;
+    const apiUrl = `https://datamall2.mytransport.sg/ltaodataservice/PV/ODBus?Date=${year}${month}`;
   
     try {
       const response = await fetch(apiUrl, {
