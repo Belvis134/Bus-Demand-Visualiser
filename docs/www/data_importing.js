@@ -10,7 +10,7 @@ document.addEventListener('DOMContentLoaded', function() {
     fetch(csv_proxy_url)
         .then(response => {
             if (!response.ok) {
-                throw new Error('CSV proxy response not ok for ' + csv_proxy_url);
+                throw new Error('You have reached the rate limit. Try again after a while.');
             }
             return response.text();
         })

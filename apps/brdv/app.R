@@ -10,6 +10,37 @@ suppressPackageStartupMessages(library(stringr))
 suppressPackageStartupMessages(library(shinyWidgets))
 print("VVV All error messages from the app are below this line VVV")
 
+# Determine the month ranges available.
+current_date <- str_split(Sys.Date(),"-")
+current_year <- as.numeric(current_date[[1]][[1]])
+current_month <- as.numeric(current_date[[1]][[2]])
+current_day <- as.numeric(current_date[[1]][[3]])
+if (current_day >= 10) {
+  if (current_month == 1) {
+    min_month <- paste0(current_year-1,"-",10)
+    max_month <- paste0(current_year-1,"-",12)
+  } else if (current_month == 2 | current_month == 3) {
+    min_month <- paste0(current_year-1,"-",9+current_month)
+    max_month <- paste0(current_year,"-",current_month-1)
+  } else {
+    min_month <- paste0(current_year,"-",current_month-3)
+    max_month <- paste0(current_year,"-",current_month-1)
+  }
+} else {
+  if (current_month == 1 | current_month == 2) {
+    min_month <- paste0(current_year-1,"-",8+current_month)
+    max_month <- paste0(current_year-1,"-",10+current_month)
+  } else if (current_month == 3 | current_month == 4) {
+    min_month <- paste0(current_year-1,"-",8+current_month)
+    max_month <- paste0(current_year,"-",current_month-2)
+  } else {
+    min_month <- paste0(current_year,"-",current_month-4)
+    max_month <- paste0(current_year,"-",current_month-2)
+  }
+}
+print(min_month)
+print(max_month)
+
 ui <- fluidPage(
   
   tags$head(
@@ -58,7 +89,7 @@ ui <- fluidPage(
         fluidRow(
           splitLayout(
             paste(" "),
-            airDatepickerInput("date", "Select Date", value = NULL, dateFormat = "yyyy-MM", view = "months", minView = "months", width = "80px", addon = "none", readonly = TRUE, autoClose = TRUE),
+            airDatepickerInput("date", "Select Date", value = NULL, minDate = min_month, maxDate = max_month, dateFormat = "yyyy-MM", view = "months", minView = "months", width = "80px", addon = "none", readonly = TRUE, autoClose = TRUE),
             div(class = "import_shift", actionButton("import", "Import", width = "80px")),
             cellWidths = c("10px","80px","80px","80px")
           )

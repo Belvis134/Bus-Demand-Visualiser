@@ -53,7 +53,7 @@ exports.handler = async function (event, context) {
       return {
         statusCode: 400,
         headers: { "Access-Control-Allow-Origin": "*" },
-        body: JSON.stringify({ error: "CSV link not found. Possibly rate limited." })
+        body: JSON.stringify({ error: "Datamall rate limit reached." })
       };
     }
 
