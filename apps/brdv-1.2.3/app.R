@@ -58,7 +58,7 @@ ui <- fluidPage(
         const datamall_promise = new Promise(function (resolve, reject) {
           const data1_params = new URLSearchParams({ Date: params.year + params.month });
           const data1_url =
-            'http://datamall2.mytransport.sg/ltaodataservice/PV/ODBus?' + data1_params.toString();
+            'https://datamall2.mytransport.sg/ltaodataservice/PV/ODBus?' + data1_params.toString();
           fetch(data1_url, {
             method: 'GET',
             headers: {
