@@ -31,7 +31,7 @@ ui <- fluidPage(
         accent-color: #007BFF;
       }
       ")),
-    tags$script(src = "data_importing.js")
+    tags$script(src = "www/data_importing.js")
   ),
   
   titlePanel(tags$p(style = "color: white; text-align: center", "Bus Route Demand Visualiser 1.2.4")),
