@@ -38,8 +38,6 @@ if (current_day >= 10) {
     max_month <- paste0(current_year,"-",current_month-2)
   }
 }
-print(min_month)
-print(max_month)
 
 ui <- fluidPage(
   
@@ -57,6 +55,9 @@ ui <- fluidPage(
       .green_text {
         color: #00DD00;
       }
+      .blue_text {
+        color: #2050C0;
+      }
       input[type='checkbox'],
       input[type='radio'] {
         accent-color: #007BFF;
@@ -65,33 +66,34 @@ ui <- fluidPage(
     tags$script(src = "../www/data_importing.js")
   ),
   
-  titlePanel(tags$p(style = "color: white; text-align: center", "Bus Route Demand Visualiser 1.2.4")),
+  titlePanel(tags$p(style = "color: white; text-align: center", "Bus Route Demand Visualiser 1.2.5")),
   sidebarLayout(
     sidebarPanel(
       width = 5,
       style = "background-color: #7F7F7F;",
-      tags$div(tags$h5(strong("Do you wish to auto import from LTA Datamall or upload CSV?"))),
-      checkboxInput("autoimport", "Import from Datamall", T),
+      tags$div(tags$h5(strong(tags$i(icon("file-import")), "Do you wish to auto import from LTA Datamall or upload CSV?"))),
+      checkboxInput("autoimport","Import from Datamall", T),
       conditionalPanel(
         condition = "input.autoimport == false",
-        tags$div(tags$h5(strong("Please wait until you receive 'File upload successful!'.", class = "red_text"))),
+        tags$div(tags$h5(strong(tags$i(icon("triangle-exclamation")), "Please wait until you receive 'File upload successful!'.", class = "red_text"))),
         fileInput("data1_in", "Choose LTA Origin-Destination CSV", width = "500px",
                   accept = c(".csv", ".docx", ".doc"),
         )),
       conditionalPanel(
         condition = "input.autoimport == true",
-        checkboxInput("use_own_key","Use your own account key?", F),
+        tags$div(tags$h5(strong(tags$i(icon("triangle-exclamation")), "If the default account key is rate limited, use your own.", class = "red_text"))),
+        checkboxInput("use_own_key", "Use your own account key", F),
         conditionalPanel(
           condition = "input.use_own_key == true",
-          textInput("own_key","Your account key",value = NA, width = "500px")
+          textInput("own_key", HTML(paste(icon("key"), "Your account key")),value = NA, width = "500px")
         ),
-        tags$div(tags$h5(strong("Please wait until you receive 'File import successful!'.", class = "red_text"))),
+        tags$div(tags$h5(strong(tags$i(icon("triangle-exclamation")), "Please wait until you receive 'File import successful!'.", class = "red_text"))),
         fluidRow(
           splitLayout(
             paste(" "),
-            airDatepickerInput("date", "Select Date", value = NULL, minDate = min_month, maxDate = max_month, dateFormat = "yyyy-MM", view = "months", minView = "months", width = "80px", addon = "none", readonly = TRUE, autoClose = TRUE),
-            div(class = "import_shift", actionButton("import", "Import", width = "80px")),
-            cellWidths = c("10px","80px","80px","80px")
+            airDatepickerInput("date", HTML(paste(icon("calendar"), "Select Date")), value = NULL, minDate = min_month, maxDate = max_month, dateFormat = "yyyy-MM", view = "months", minView = "months", width = "100px", addon = "none", readonly = TRUE, autoClose = TRUE),
+            div(class = "import_shift", actionButton("import", "Import", width = "90px", icon = icon("file-import"))),
+            cellWidths = c("10px","100px","90px")
           )
         )
       ),
@@ -99,42 +101,43 @@ ui <- fluidPage(
       checkboxInput("seespecstops", "See specific bus stops", F),
       conditionalPanel(
         condition = "input.seespecstops == false",
-        textInput("svc_in", "Which bus service would you like to see?", width = "500px"),
-        radioButtons("svc_half_in", "Do you want to split route in half?", width = "500px", choices = c("Full", "1st half", "2nd half"), inline = T),
-        radioButtons("dir_in", "Which direction? For loop, put as 1.", width = "500px", choices = c(1,2), inline = T)
+        textInput("svc_in", HTML(paste(icon("bus"), "Which bus service would you like to see?")), width = "500px"),
+        radioButtons("svc_half_in", HTML(paste(icon("scissors"), "Do you want to split route in half?")), width = "500px", choices = c("Full", "1st half", "2nd half"), inline = T),
+        radioButtons("dir_in", HTML(paste(icon("right-left"), "Which direction? For loop", icon("rotate"), ", put as 1.")), width = "500px", choices = c(1,2), inline = T)
       ),
       conditionalPanel(
         condition = "input.seespecstops == true",
-        tags$div(tags$h5(strong("Warning! The bus stops you listed in the origin box must be paired with a corresponding bus stop in order in the destination box, i.e. 10009,10011 as origin, 10017,10018 as destination, 10009 pairs with 10017, 10011 pairs with 10018.", class = "red_text"))),
+        tags$div(tags$h5(strong(tags$i(icon("triangle-exclamation")), "The bus stops you listed in the origin box must be paired with a corresponding bus stop in order in the destination box.", class = "red_text"))),
+        tags$div(tags$h5(strong(tags$i(icon("circle-info")), "For example, if you put 10009,10011 as origin, 10017,10018 as destination, 10009 pairs with 10017, 10011 pairs with 10018.", class = "blue_text"))),
         textInput("ori_stops", "Which specific origin stops? Put a comma between bus stops.", width = "500px"),
         textInput("dst_stops", "Which specific destination stops? Put a comma between bus stops.", width = "500px")
       ),
       tags$div(tags$h4(strong("Please select your filters. Filters available include time and day type filters."))),
-      radioButtons("day_filter","Select Day Type filter", choices = c("Combined" = "cmb","Weekday" = "wkday","Weekend/PH" = "wkend_ph"), selected = c("cmb"), inline = T),
-      tags$div(tags$h5(strong("Select Time Period filter"))),
+      radioButtons("day_filter", HTML(paste(icon("calendar"), "Select Day Type filter")), choices = c("Combined" = "cmb","Weekday" = "wkday","Weekend/PH" = "wkend_ph"), selected = c("cmb"), inline = T),
+      tags$div(tags$h5(strong(tags$i(icon("clock")), "Select Time Period filter"))),
       checkboxInput("time_filter","Filter by Time Period", F),
       conditionalPanel(
         condition = "input.time_filter == true",
-        tags$div(tags$h5(strong("For time filters, give in 24h format. For continuation to next day, let time since be greater than time until. Both equal are treated as full (Why would you do that?).", class = "red_text"))),
+        tags$div(tags$h5(strong(tags$i(icon("triangle-exclamation")), "For time filters, give in 24h format. For continuation to next day, let time since be greater than time until. Both equal are treated as full (Why would you do that?).", class = "red_text"))),
         radioButtons("more_time_filters", "Include how many time periods?", choices = c("1" = "1", "2" = "2", "3" = "3", "4" = "4"), selected = c("1"), inline = T),
-        tags$div(tags$h5(strong("Select Time Period filter 1", class = "green_text"))),
+        tags$div(tags$h5(strong("Select Time Period filter 1", class = "blue_text"))),
         sliderInput("time_since1","TP1: Since what hour?", 0, 23, 0, step = 1, animate = F, width = "200px"),
         sliderInput("time_until1","TP2: Until what hour?", 0, 23, 0, step = 1, animate = F, width = "200px"),
         conditionalPanel(
           condition = "input.more_time_filters == '2' || input.more_time_filters == '3' || input.more_time_filters == '4'",
-          tags$div(tags$h5(strong("Select Time Period filter 2", class = "green_text"))),
+          tags$div(tags$h5(strong("Select Time Period filter 2", class = "blue_text"))),
           sliderInput("time_since2", "TP2: Since what hour?", 0, 23, 0, step = 1, animate = F, width = "200px"),
           sliderInput("time_until2", "TP2: Until what hour?", 0, 23, 0, step = 1, animate = F, width = "200px")
         ),
         conditionalPanel(
           condition = "input.more_time_filters == '3' || input.more_time_filters == '4'",
-          tags$div(tags$h5(strong("Select Time Period filter 3", class = "green_text"))),
+          tags$div(tags$h5(strong("Select Time Period filter 3", class = "blue_text"))),
           sliderInput("time_since3", "TP3: Since what hour?", 0, 23, 0, step = 1, animate = F, width = "200px"),
           sliderInput("time_until3", "TP3: Until what hour?", 0, 23, 0, step = 1, animate = F, width = "200px")
         ),
         conditionalPanel(
           condition = "input.more_time_filters == '4'",
-          tags$div(tags$h5(strong("Select Time Period filter 4", class = "green_text"))),
+          tags$div(tags$h5(strong("Select Time Period filter 4", class = "blue_text"))),
           sliderInput("time_since4", "TP4: Since what hour?", 0, 23, 0, step = 1, animate = F, width = "200px"),
           sliderInput("time_until4", "TP4: Until what hour?", 0, 23, 0, step = 1, animate = F, width = "200px")
         ),
@@ -147,7 +150,7 @@ ui <- fluidPage(
         condition = "input.seespecstops == true",
         checkboxInput("stop_names2", "Display bus stop names in cells", F),
       ),
-      actionButton("generate","Generate Table", width = "120px"),
+      actionButton("generate", "Generate Table", width = "140px", icon = icon("table")),
       htmlOutput("result_conf")
     ),
     mainPanel(
@@ -198,9 +201,9 @@ server <- function(input, output, session) {
     pre_data1 <- read.csv(input$data1_in$datapath, colClasses = c("ORIGIN_PT_CODE" = "character", "DESTINATION_PT_CODE" = "character"))
     if (!is.null(pre_data1)) {
       data1(pre_data1)
-      conf_msg("<span style='color:#00DD00; font-weight:bold;'>File upload successful!</span>")
+      conf_msg("<span style='color:#00DD00; font-weight:bold;'><i class='fas fa-square-check'></i> File upload successful!</span>")
     } else {
-      conf_msg("<span style='color:#BB0000; font-weight:bold;'>File upload failed. Please check for data corruption or correct file format.</span>")
+      conf_msg("<span style='color:#BB0000; font-weight:bold;'><i class='fas fa-triangle-exclamation'></i> File upload failed. Please check for data corruption or correct file format.</span>")
     }
   })
 
@@ -241,15 +244,15 @@ server <- function(input, output, session) {
     if (is.null(data2)) {
       # Send the custom message to fetch BusRouter data.
       session$sendCustomMessage("fetch_busrouter", list())
-      }
-    })
+    }
+  })
   
   result <- eventReactive(list(input$generate, fetched_data()), {
     req(input$generate)
     # Check that data1 exists before proceeding.
     if (is.null(data1())) {
       tryCatch({
-        conf_msg2(paste0("<span style='color:#BB0000; font-weight:bold;'>You need to upload something, if not what do you wanna see?!</span>"))
+        conf_msg2(paste0("<span style='color:#BB0000; font-weight:bold;'><i class='fas fa-triangle-exclamation'></i> You need to upload something, if not what do you wanna see?!</span>"))
         stop("data1 not defined.")
       }, error = function(e) {
         print(e$message)
@@ -262,6 +265,7 @@ server <- function(input, output, session) {
       data2 <- json_data$data2
       data3 <- json_data$data3
     }
+    conf_msg2("<span style='color:#2050C0; font-weight:bold;'><i class='fas fa-circle-info'></i> Calculating things, please wait...")
     svc2 <- as.character(svc())
     dir2 <- as.numeric(dir())
     if (identical(day_filter(), "cmb")) {
@@ -304,7 +308,7 @@ server <- function(input, output, session) {
       stop_cur <- data2[[svc2]]$routes[[dir2]]
       if (is.null(stop_cur)) {
         tryCatch({
-          conf_msg2(paste0("<span style='color:#BB0000; font-weight:bold;'>Invalid bus service. Is your bus service withdrawn?</span>"))
+          conf_msg2(paste0("<span style='color:#BB0000; font-weight:bold;'><i class='fas fa-triangle-exclamation'></i> Invalid bus service. Is your bus service withdrawn?</span>"))
           stop("Invalid bus service.")
         }, error = function(e) {
           stop(e$message)
@@ -448,7 +452,7 @@ server <- function(input, output, session) {
       l_dst <- length(dst_stops[[1]])
       if (l_ori != l_dst) {
         tryCatch({
-          conf_msg2(paste0("<span style='color:#BB0000; font-weight:bold;'>The lengths of your origin stops and destination stops do not match.</span>"))
+          conf_msg2(paste0("<span style='color:#BB0000; font-weight:bold;'><i class='fas fa-triangle-exclamation'></i> The lengths of your origin stops and destination stops do not match.</span>"))
           stop("Length of origin stops not equal to length of destination stops.")
         }, error = function(e) {
           stop(e$message)
@@ -469,7 +473,7 @@ server <- function(input, output, session) {
           !!filter_day_type, !!filter_time_period))
         if (valid_stops == 0) {
           tryCatch({
-            conf_msg2(paste0("<span style='color:#BB0000; font-weight:bold;'>Invalid bus stop code(s) detected! Check your codes to see if it's a proper O-D pair, or there's absolutely no one going from A to B.</span>"))
+            conf_msg2(paste0("<span style='color:#BB0000; font-weight:bold;'><i class='fas fa-triangle-exclamation'></i> Invalid bus stop code(s) detected! Check your codes to see if it's a proper O-D pair, or there's absolutely no one going from A to B.</span>"))
             stop("Invalid stop codes or no demand.")
           }, error = function(e) {
             stop(e$message)
@@ -492,7 +496,6 @@ server <- function(input, output, session) {
       dataod3a <- as.matrix(dataod3a)
       cols = colorRamp2(c(0, 1, 30, 300, 1500, 6000, 30000, 99000), c("gray60","white","white", "yellow", "orange", "red", "darkred","black"))
       img_dims <- list(width = 520, height = 24 * nrow(dataod3) + 90)
-      conf_msg2("<span style='color:#40A0E0; font-weight:bold;'>Drawing heatmap, please wait...</span>")
       img <- Heatmap(dataod3,
         name = paste(day_type, "Demand,", time_period),
         show_column_dend = FALSE,
@@ -558,11 +561,11 @@ server <- function(input, output, session) {
     if (identical(spec_stops(), FALSE)) {
       req(result())
       draw(result()$img)
-      conf_msg2("<span style='color:#00DD00; font-weight:bold;'>Heatmap successfully drawn!</span>")
+      conf_msg2("<span style='color:#00DD00; font-weight:bold;'><i class='fas fa-square-check'></i> Heatmap successfully drawn!</span>")
     } else {
       req(result())
       draw(result()$img, heatmap_legend_side = "top")
-      conf_msg2("<span style='color:#00DD00; font-weight:bold;'>Heatmap successfully drawn!</span>")
+      conf_msg2("<span style='color:#00DD00; font-weight:bold;'><i class='fas fa-square-check'></i> Heatmap successfully drawn!</span>")
     }
     dev.off()
     list(

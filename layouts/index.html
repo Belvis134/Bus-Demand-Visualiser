@@ -65,8 +65,34 @@
     <div class="page-body  my-10">
     <section id="visualiser-app">
       <h2>Bus Route Demand Visualiser</h2>
-      <iframe id="app-frame" src="https://belvis134.github.io/Bus-Route-Demand-Visualiser/" width="100%" height="100%"></iframe>
-      <button onclick="restartApp()">Restart App</button>
+      <iframe id="app-frame" src="https://belvis134.github.io/Bus-Route-Demand-Visualiser/" width="100%"></iframe>
+      <script>
+        window.addEventListener("message", function(event) {
+          if (event.data && event.data.iframe_height) {
+            document.getElementById("app-frame").style.height = event.data.iframe_height + "px";
+          }
+        });
+      </script>
+      <button onclick="restart_app()">Restart App</button>
+      <script>
+        function restart_app() {
+          if ('caches' in window) {
+            caches.keys().then(function(keys) {
+              return Promise.all(keys.map(function(key) {
+                return caches.delete(key);
+              }));
+            }).finally(function(r) {
+              // Reload with a cache-busting query parameter.
+              const currentUrl = window.location.href.split('?')[0];
+              window.location.href = currentUrl + '?nocache=' + new Date().getTime();
+            });
+          } else {
+            // If Cache API isn't supported, do a normal reload with cache-busting.
+            const currentUrl = window.location.href.split('?')[0];
+            window.location.href = currentUrl + '?nocache=' + new Date().getTime();
+          }
+        }
+      </script>
     </section>
     </div>
     <div class="page-footer">
