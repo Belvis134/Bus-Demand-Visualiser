@@ -21,7 +21,11 @@
   },
   "homepage": "https://github.com/Belvis134/Bus-Route-Demand-Visualiser#readme",
   "dependencies": {
+    "@discordjs/rest": "^2.5.0",
     "adm-zip": "^0.5.16",
-    "node-fetch": "^2.7.0"
+    "discord-api-types": "^0.38.1",
+    "discord.js": "^14.19.2",
+    "node-fetch": "^2.7.0",
+    "tweetnacl": "^1.0.3"
   }
 }
