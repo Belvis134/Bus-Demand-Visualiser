@@ -24,16 +24,16 @@ exports.handler = async (event, context) => {
   const rawBody = event.body;
   // If not an internal call, perform signature verification.
   if (!isInternalCall) {
+    // For external calls, read the required headers
     const signature = event.headers['x-signature-ed25519'];
     const timestamp = event.headers['x-signature-timestamp'];
+    
+    // Verify the request signature only on external calls.
     if (!verifyDiscordRequest(signature, timestamp, rawBody)) {
       return { statusCode: 401, body: 'Invalid request signature' };
     }
-  }
-
-  // Verify that this is coming from Discord.
-  if (!verifyDiscordRequest(signature, timestamp, rawBody)) {
-    return { statusCode: 401, body: 'Invalid request signature' };
+  } else {
+    console.log("Internal call detected; skipping signature verification.");
   }
 
   // Parse JSON
