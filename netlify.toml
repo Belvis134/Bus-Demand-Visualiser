@@ -18,4 +18,4 @@ HUGO_ENV = 'production'
 
 [functions]
   node_bundler = "esbuild"
-  timeout = 20s
+  timeout = 20
