@@ -71,14 +71,28 @@ exports.handler = async function (event, context) {
     const link = json_data.value[0].Link;
     console.log("Extracted CSV link:", link);
 
-    // --- Step 4: Return the CSV link with proper CORS headers ---
+    // --- Step 4: Return the CSV link and extracts ZIP buffer, encoding it ---
+    const link_response = await fetch(link);
+    if (!link_response.ok) {
+      return {
+        statusCode: link_response.status,
+        headers: { "Access-Control-Allow-Origin": "*" },
+        body: JSON.stringify({ error: "Failed to fetch the ZIP file from S3." })
+      };
+    }
+    // Read the ZIP file as an ArrayBuffer.
+    const zip_buffer = await link_response.buffer();
+    // Convert the ArrayBuffer to a Base64-encoded string.
+    const zip_base64 = zip_buffer.toString("base64");
+
+    // --- Step 5: Return the encoded ZIP buffer base64 string in a JSON response ---
     return {
       statusCode: 200,
       headers: {
         "Access-Control-Allow-Origin": "*",
-        "Content-Type": "text/plain"
+        "Content-Type": "application/json"
       },
-      body: link
+      body: JSON.stringify({ zip_base64: zip_base64 })
     };
   } catch (error) {
     console.error('Error in datamall_proxy:', error);
