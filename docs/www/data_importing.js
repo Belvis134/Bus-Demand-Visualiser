@@ -2,49 +2,58 @@ document.addEventListener('DOMContentLoaded', function() {
   // Fetch Datamall data via Netlify
   Shiny.addCustomMessageHandler('fetch_datamall', function(params) {
     document.getElementById('upload_conf').innerHTML =
-        '<span style=\"color:#2050C0; font-weight:bold;\"><i class=\"fas fa-hourglass-half\"></i> Importing from Datamall, please wait...</span>';
+      '<span style=\"color:#2050C0; font-weight:bold;\"><i class=\"fas fa-hourglass-half\"></i> Importing from Datamall, please wait...</span>';
     const encoded_account_key = encodeURIComponent(params.account_key);
     const csv_proxy_url = 'https://brdv.netlify.app/.netlify/functions/datamall_proxy' +
-        '?date=' + params.date +
-        '&account_key=' + encoded_account_key;
+      '?date=' + params.date +
+      '&account_key=' + encoded_account_key;
     fetch(csv_proxy_url)
-        .then(response => {
-            return response.text();
-        })
-        .then(function(return_csv_data) {
-          // Check for an empty (or null) response.
-          if (!return_csv_data || return_csv_data.trim() === "") {
-            throw new Error("Bad response. Is your account key valid?");
-          }
-          // Try parsing the response as JSON to see if there's a fault, which means you reached rate limit.
-          let parsed_response;
-          try {
-            parsed_response = JSON.parse(return_csv_data);
-          } catch(e) {
-            parsed_response = null;
-          }
-          if (parsed_response && parsed_response.fault) {
-            throw new Error('You have reached the rate limit. Try again after a while.');
-          }
-          // Pass the full CSV text to Shiny.
-          var csv_data = {
-            data1: return_csv_data
-          };
-          Shiny.setInputValue('csv_data_in', csv_data); 
-          document.getElementById('result_conf').innerHTML =
-            '<span style=\"color:#00DD00; font-weight:bold;\"><i class=\"fas fa-square-check\"></i> File import successful!</span>';
-        })
-        .catch(err => {
-            console.error(err);
-            let final_error_msg = err.message;
-            if (!navigator.onLine) {
-              final_error_msg = "Your internet is dead. Good job.";
-            } else if (err.message.includes("Failed to fetch")) {
-              final_error_msg = "Stuff can't connect, Your internet good man?";
-            }   
-            document.getElementById('upload_conf').innerHTML =
-              '<span style=\"color:#BB0000; font-weight:bold;\"><i class=\"fas fa-triangle-exclamation\"></i> ' + final_error_msg + '</span>';
-        });
+      .then(response => response.text())
+      .then(function(response_text) {
+        // Try to parse as JSON to detect error messages
+        let parsed_response;
+        try {
+          parsed_response = JSON.parse(response_text);
+        } catch (e) {
+          parsed_response = null;
+        }
+        if (parsed_response && parsed_response.error) {
+          throw new Error(parsed_response.error);
+        }
+        // Otherwise, we have a plain text link to the ZIP file.
+        const csv_link = response_text.trim();
+        // Now fetch the ZIP file from the CSV link.
+        return fetch(csv_link);
+      })
+      .then(response => {
+        if (!response.ok) {
+          throw new Error("Failed to fetch the ZIP file from the CSV link.");
+        }
+        return response.arrayBuffer();
+      })
+      .then(function(arrayBuffer) {
+        // Use JSZip to load the ZIP file. JSZip.loadAsync returns a promise.
+        return JSZip.loadAsync(arrayBuffer);
+      })
+      .then(function(zip) {
+        // Find and extract CSV as string from ZIP file.
+        const file_names = Object.keys(zip.files);
+        const csv_file_name = file_names[0];
+        console.log("Extracting data from: ", csv_file_name);
+        return zip.files[csv_file_name].async("string");
+      })
+      .then(function(csv_text) {
+        // Pass the CSV text to Shiny.
+        var csv_data = { data1: csv_text };
+        Shiny.setInputValue('csv_data_in', csv_data);
+        document.getElementById('result_conf').innerHTML =
+          '<span style="color:#00DD00; font-weight:bold;"><i class="fas fa-square-check"></i> File import successful!</span>';
+      })
+      .catch(err => {
+        console.error(err);
+        document.getElementById('upload_conf').innerHTML =
+          '<span style="color:#BB0000; font-weight:bold;"><i class="fas fa-triangle-exclamation"></i> ' + err.message + '</span>';
+      });
   });
 
   // Fetch JSON data (data2 & data3) from BusRouter.

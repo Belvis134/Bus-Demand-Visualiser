@@ -1,7 +1,7 @@
 exports.handler = async function (event, context) {
   // Dependencies
   const fetch = require('node-fetch');
-  const unzip = require('adm-zip');
+
   // Handle preflight OPTIONS request for CORS  
   if (event.httpMethod === "OPTIONS") {
     return {
@@ -17,9 +17,7 @@ exports.handler = async function (event, context) {
 
   // Extract query parameters sent from the client
   const { date, account_key } = event.queryStringParameters;
-  
-  // Use provided account key or fall back to an environment variable
-  const AccountKey = account_key ? account_key : process.env.ACCOUNT_KEY;
+  const AccountKey = account_key
 
   // Construct the Datamall JSON API URL
   const datamall_url = `https://datamall2.mytransport.sg/ltaodataservice/PV/ODBus?Date=${date}`;
@@ -28,7 +26,7 @@ exports.handler = async function (event, context) {
 
   try {
     // --- Step 1: Fetch JSON data from Datamall ---
-    const json_response = await fetch(datamall_url, {
+    const response = await fetch(datamall_url, {
       method: "GET",
       headers: {
         'AccountKey': AccountKey,
@@ -36,56 +34,52 @@ exports.handler = async function (event, context) {
       }
     });
 
-    if (!json_response.ok) {
-      return {
-        statusCode: json_response.status,
-        headers: { "Access-Control-Allow-Origin": "*" },
-        body: JSON.stringify({ error: `Failed fetching JSON from Datamall. Status: ${json_response.status}` })
-      };
+    if (!response.ok) {
+      const error_text = await response.text();
+      let error_json = null;
+      try{
+        error_json = JSON.parse(error_text)
+      } catch (e) {}
+      if (response.status === 404) {
+        if (error_text.trim() === "The requested API was not found") {
+          return {
+            statusCode: 404,
+            headers: { "Access-Control-Allow-Origin": "*" },
+            body: JSON.stringify({ error: "Invalid account key... Huh?!" })
+          };
+        } 
+        else if (error_text.trim() === "") {
+          return {
+            statusCode: 404,
+            headers: { "Access-Control-Allow-Origin": "*" },
+            body: JSON.stringify({ error: "No data found for the given date. Is your provided date within the last 3 months?" })
+          };
+        }
+      } else if (error_json && error_json.fault) {
+          return {
+            statusCode: 429,
+            headers: { "Access-Control-Allow-Origin": "*" },
+            body: JSON.stringify({ error: "You have reached the rate limit. Try again after a while." })
+          };
+      }
     }
 
-    const json_data = await json_response.json();
+    // --- Step 2: Parse JSON data ---
+    const json_data = await response.json();
 
-    // --- Step 2: Extract the CSV link from the JSON ---
-    const link = (json_data.value && json_data.value[0] && json_data.value[0].Link) || null;
+    // --- Step 3: Extract the CSV link from the JSON ---
+    const link = json_data.value[0].Link;
     console.log("Extracted CSV link:", link);
-    if (!link) {
-      return {
-        statusCode: 400,
-        headers: { "Access-Control-Allow-Origin": "*" },
-        body: JSON.stringify({ error: "Datamall rate limit reached." })
-      };
-    }
 
-    // --- Step 3: Fetch the CSV (or ZIP file containing CSV) from the link ---
-    const csv_response = await fetch(link);
-    if (!csv_response.ok) {
-      return {
-        statusCode: csv_response.status,
-        headers: { "Access-Control-Allow-Origin": "*" },
-        body: JSON.stringify({ error: "Failed to fetch CSV file from Datamall." })
-      };
-    }
-
-    // Link returns a ZIP file, needs unzipping.
-    const buffer = await csv_response.buffer();
-    const zip = new unzip(buffer);
-    const zip_entries = zip.getEntries();
-    if(zip_entries.length === 0) {
-      throw new Error("No entries in ZIP file");
-    }
-    const csv_text = zip_entries[0].getData().toString('utf8');
-    
-    // --- Step 4: Return the CSV text with proper CORS headers ---
+    // --- Step 4: Return the CSV link with proper CORS headers ---
     return {
       statusCode: 200,
       headers: {
-        "Access-Control-Allow-Origin": "*",  // Adjust if you want to restrict to specific origins.
+        "Access-Control-Allow-Origin": "*",
         "Content-Type": "text/plain"
       },
-      body: csv_text
+      body: link
     };
-
   } catch (error) {
     console.error('Error in datamall_proxy:', error);
     return {
