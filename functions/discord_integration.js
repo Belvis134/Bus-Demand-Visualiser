@@ -20,60 +20,57 @@ function verifyDiscordRequest(signature, timestamp, body) {
 }
 
 exports.handler = async (event, context) => {
-  const isInternalCall = event.headers['x-internal-call'] === 'true';
   const rawBody = event.body;
-  // If not an internal call, perform signature verification.
+  const isInternalCall = event.headers['x-internal-call'] === 'true';
+  
   if (!isInternalCall) {
-    // For external calls, read the required headers
     const signature = event.headers['x-signature-ed25519'];
     const timestamp = event.headers['x-signature-timestamp'];
-    
-    // Verify the request signature only on external calls.
     if (!verifyDiscordRequest(signature, timestamp, rawBody)) {
       return { statusCode: 401, body: 'Invalid request signature' };
     }
   } else {
     console.log("Internal call detected; skipping signature verification.");
   }
-
-  // Parse JSON
+  
   let payload;
   try {
     payload = JSON.parse(rawBody);
   } catch (err) {
     return { statusCode: 400, body: 'Bad request' };
   }
-
-  // Handle Ping (Type 1) – Discord sends this initially for verification.
+  
+  if (isInternalCall) {
+    // Handle the internal call payload (session_data) here.
+    // For example, forward the request to your R app, process Datamall access, etc.
+    try {
+      const heatmap_data = await processInternalHeatmapCommand(payload /* or whatever structure session_data is */);
+      // Optionally, return a response that your internal caller expects.
+      return { statusCode: 200, body: JSON.stringify({ image_url: heatmap_data.image_url }) };
+    } catch (error) {
+      console.error("Internal processing error:", error);
+      return { statusCode: 500, body: 'Internal processing error' };
+    }
+  }
+  
+  // The following still handles Discord interactions.
   if (payload.type === 1) {
     return { statusCode: 200, body: JSON.stringify({ type: 1 }) };
   }
-
+  
   if (payload.type === 2) {
-    // Immediately send a deferred response (Type 5)
-    const deferredResponse = { type: 5 };
-
-    // Fire-and-forget our async command processing:
+    const deferred_response = { type: 5 };
     (async () => {
       try {
-        // 1. Start a new session to run your R Shiny app command (specific to your internal logic)
         const heatmapData = await processHeatmapCommand(payload.data.options);
-        
-        // 2. Once the heatmap is ready, send a follow-up POST to Discord
         await sendDiscordFollowup(payload.token, heatmapData);
         console.log("Heatmap processing complete and follow-up sent.");
       } catch (error) {
         console.error("Error processing heatmap command:", error);
-        // Optionally, send an error follow-up notification to Discord.
       }
     })();
-
-    return { statusCode: 200, body: JSON.stringify(deferredResponse) };
+    return { statusCode: 200, body: JSON.stringify(deferred_response) };
   }
-
-  // If none of the above match, return an error.
-  return {
-    statusCode: 400,
-    body: 'Unknown interaction type'
-  };
+  
+  return { statusCode: 400, body: 'Unknown interaction type' };
 };

@@ -4,35 +4,18 @@ document.addEventListener('DOMContentLoaded', function() {
     document.getElementById('upload_conf').innerHTML =
       '<span style=\"color:#2050C0; font-weight:bold;\"><i class=\"fas fa-hourglass-half\"></i> Importing from Datamall, please wait...</span>';
     const encoded_account_key = encodeURIComponent(params.account_key);
-    const csv_proxy_url = 'https://brdv.netlify.app/.netlify/functions/datamall_proxy' +
+    const csv_proxy_url = 'https://stc-brdv.fly.dev/proxy/datamall/datamall_proxy' +
       '?date=' + params.date +
       '&account_key=' + encoded_account_key;
     fetch(csv_proxy_url)
-      .then(response => response.json())
-      .then(function(data) {
-        const zip_base64 = data.zip_base64;
-        // Decode Base64 string to binary string.
-        const binary_string = window.atob(zip_base64);
-        const len = binary_string.length;
-        const bytes = new Uint8Array(len);
-        for (let i = 0; i < len; i++) {
-          bytes[i] = binary_string.charCodeAt(i);
-        }
-        // Convert back to an ArrayBuffer.
-        const arrayBuffer = bytes.buffer;
-        return JSZip.loadAsync(arrayBuffer);
-      })
-      .then(function(zip) {
-        // Find and extract CSV as string from ZIP file.
-        const file_names = Object.keys(zip.files);
-        const csv_file_name = file_names[0];
-        return zip.files[csv_file_name].async("string");
+      .then(response => {
+        if (!response.ok) throw new Error("Error fetching CSV from endpoint");
+        return response.text();
       })
       .then(function(csv_text) {
         // Pass the CSV text to Shiny.
-        var csv_data = { data1: csv_text };
-        Shiny.setInputValue('csv_data_in', csv_data);
-        document.getElementById('result_conf').innerHTML =
+        Shiny.setInputValue('csv_data_in', { data1: csv_text });
+        document.getElementById('upload_conf').innerHTML =
           '<span style="color:#00DD00; font-weight:bold;"><i class="fas fa-square-check"></i> File import successful!</span>';
       })
       .catch(err => {

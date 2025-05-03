@@ -63,7 +63,6 @@ ui <- fluidPage(
         accent-color: #007BFF;
       }
       ")),
-    tags$script(src = "https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.0/jszip.min.js"),
     tags$script(src = "../www/data_importing.js")
   ),
   
