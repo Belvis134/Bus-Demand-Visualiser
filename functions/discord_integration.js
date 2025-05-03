@@ -2,7 +2,7 @@ const nacl = require('tweetnacl');
 
 const DISCORD_PUBLIC_KEY = process.env.DISCORD_PUBLIC_KEY;
 
-function verifyDiscordRequest(signature, timestamp, body) {
+function verify_discord_request(signature, timestamp, body) {
   try {
     const message = Buffer.from(timestamp + body);
     const signatureBuffer = Buffer.from(signature, 'hex');
@@ -26,7 +26,7 @@ exports.handler = async (event, context) => {
   if (!isInternalCall) {
     const signature = event.headers['x-signature-ed25519'];
     const timestamp = event.headers['x-signature-timestamp'];
-    if (!verifyDiscordRequest(signature, timestamp, rawBody)) {
+    if (!verify_discord_request(signature, timestamp, rawBody)) {
       return { statusCode: 401, body: 'Invalid request signature' };
     }
   } else {
@@ -44,7 +44,7 @@ exports.handler = async (event, context) => {
     // Handle the internal call payload (session_data) here.
     // For example, forward the request to your R app, process Datamall access, etc.
     try {
-      const heatmap_data = await processInternalHeatmapCommand(payload /* or whatever structure session_data is */);
+      const heatmap_data = await get_discord_data(payload /* or whatever structure session_data is */);
       // Optionally, return a response that your internal caller expects.
       return { statusCode: 200, body: JSON.stringify({ image_url: heatmap_data.image_url }) };
     } catch (error) {
@@ -62,8 +62,8 @@ exports.handler = async (event, context) => {
     const deferred_response = { type: 5 };
     (async () => {
       try {
-        const heatmapData = await processHeatmapCommand(payload.data.options);
-        await sendDiscordFollowup(payload.token, heatmapData);
+        const heatmapData = await get_heatmap(payload.data.options);
+        await post_to_discord(payload.token, heatmapData);
         console.log("Heatmap processing complete and follow-up sent.");
       } catch (error) {
         console.error("Error processing heatmap command:", error);
