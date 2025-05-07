@@ -66,7 +66,7 @@ ui <- fluidPage(
     tags$script(src = "../www/data_importing.js")
   ),
   
-  titlePanel(tags$p(style = "color: white; text-align: center", "Bus Route Demand Visualiser 1.2.5")),
+  titlePanel(tags$p(style = "color: white; text-align: center", "Bus Route Demand Visualiser 1.2.6")),
   sidebarLayout(
     sidebarPanel(
       width = 5,
@@ -227,8 +227,8 @@ server <- function(input, output, session) {
     session$sendCustomMessage("fetch_datamall", datamall_params())
   })
   
-  observeEvent(input$csv_data$data1, {
-    pre_data1 <- read.csv(text = input$data1_data, colClasses = c("ORIGIN_PT_CODE" = "character", "DESTINATION_PT_CODE" = "character"))
+  observeEvent(input$csv_data_in$data1, {
+    pre_data1 <- read.csv(text = input$csv_data_in$data1, colClasses = c("ORIGIN_PT_CODE" = "character", "DESTINATION_PT_CODE" = "character"))
     data1(pre_data1)
   })
   
