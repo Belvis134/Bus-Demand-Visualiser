@@ -4,7 +4,7 @@ document.addEventListener('DOMContentLoaded', function() {
     document.getElementById('upload_conf').innerHTML =
       '<span style=\"color:#2050C0; font-weight:bold;\"><i class=\"fas fa-hourglass-half\"></i> Importing from Datamall, please wait...</span>';
     const encoded_account_key = encodeURIComponent(params.account_key);
-    const csv_proxy_url = 'https://stc-brdv.fly.dev/datamall_proxy' +
+    const csv_proxy_url = 'https://stc-brdv.fly.dev/datamall-proxy' +
       '?date=' + params.date +
       '&account_key=' + encoded_account_key;
     fetch(csv_proxy_url)
