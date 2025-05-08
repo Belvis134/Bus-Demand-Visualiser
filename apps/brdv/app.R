@@ -63,7 +63,8 @@ ui <- fluidPage(
         accent-color: #007BFF;
       }
       ")),
-    tags$script(src = "../www/data_importing.js")
+    tags$script(src = "../www/data_importing.js"),
+    tags$script(src = "../www/discord_data_transfer.js")
   ),
   
   titlePanel(tags$p(style = "color: white; text-align: center", "Bus Route Demand Visualiser 1.2.6")),
@@ -109,11 +110,11 @@ ui <- fluidPage(
         condition = "input.seespecstops == true",
         tags$div(tags$h5(strong(tags$i(icon("triangle-exclamation")), "The bus stops you listed in the origin box must be paired with a corresponding bus stop in order in the destination box.", class = "red_text"))),
         tags$div(tags$h5(strong(tags$i(icon("circle-info")), "For example, if you put 10009,10011 as origin, 10017,10018 as destination, 10009 pairs with 10017, 10011 pairs with 10018.", class = "blue_text"))),
-        textInput("ori_stops", "Which specific origin stops? Put a comma between bus stops.", width = "500px"),
+        textInput("ori_stops", "Which specific origin stops? Put a comma between bus stops.", width = "500px", value = "null"),
         textInput("dst_stops", "Which specific destination stops? Put a comma between bus stops.", width = "500px")
       ),
       tags$div(tags$h4(strong("Please select your filters. Filters available include time and day type filters."))),
-      radioButtons("day_filter", HTML(paste(icon("calendar"), "Select Day Type filter")), choices = c("Combined" = "cmb","Weekday" = "wkday","Weekend/PH" = "wkend_ph"), selected = c("cmb"), inline = T),
+      radioButtons("day_filter", HTML(paste(icon("calendar"), "Select Day Type filter")), choices = c("Combined" = "combined","Weekday" = "weekday","Weekend/PH" = "weekend_ph"), selected = c("combined"), inline = T),
       tags$div(tags$h5(strong(tags$i(icon("clock")), "Select Time Period filter"))),
       checkboxInput("time_filter","Filter by Time Period", F),
       conditionalPanel(
@@ -161,25 +162,48 @@ ui <- fluidPage(
 
 server <- function(input, output, session) {
   
-  normalise_json <- function(json) {
-    fromJSON(json)
-  }
+  normalise_json <- function(json) {fromJSON(json)}
   
   options(shiny.maxRequestSize=900*1024^2)
   
-  svc <- reactive({input$svc_in})
-  dir <- reactive({input$dir_in})
-  svc_half <- reactive({input$svc_half_in})
+  discord_data <- reactive({input$discord_data})
+  svc <- reactive({if (!identical(discord_data()$svc, NULL)) {discord_data()$svc}
+    else {input$svc_in}})
+  dir <- reactive({if (!identical(discord_data()$dir, NULL)) {discord_data()$dir}
+    else {input$dir_in}})
+  svc_half <- reactive({if (!identical(discord_data()$svc_half, NULL)) {discord_data()$svc_half}
+    else {input$svc_half_in}})
+  sp_ori <- reactive({if (!identical(discord_data()$sp_ori, NULL)) {discord_data()$sp_ori}
+    else {input$ori_stops}})
+  sp_dst <- reactive({if (!identical(discord_data()$sp_dst, NULL)) {discord_data()$sp_dst}
+    else {input$dst_stops}})
+  spec_stops <- reactive({if (!identical(discord_data()$type_bool, NULL)) {discord_data()$type_bool}
+    else {input$seespecstops}})
+  day_filter <- reactive({if (!identical(discord_data()$day_type, NULL)) {discord_data()$day_type}
+    else {input$day_filter}})
+  time_filter <- reactive({if (identical(discord_data()$day_type, NULL) || identical(input$time_filter, FALSE)) {FALSE}
+    else {TRUE}})
+  time_periods <- reactive({
+    time_since_list <- vector("list", 4)
+    time_until_list <- vector("list", 4)
+    if (!identical(discord_data()$time_periods, NULL)) {
+      for (k in 1:4) {
+        time_since_list[[k]] <- input$discord_data[[paste0("period", k)]][["time_since"]]
+        time_until_list[[k]]  <- input$discord_data[[paste0("period", k)]][["time_until"]]
+      }
+    } else {
+      for (k in 1:4) {
+        time_since_list[[k]] <- input[[paste0("time_since", k)]]
+        time_until_list[[k]]  <- input[[paste0("time_until", k)]]
+      }
+    }
+    list(time_since_list = time_since_list, time_until_list = time_until_list)
+  })
+  display_stop_names <- reactive({list(discord_data()$rows, discord_data()$columns, discord_data()$cells)})
   data1 <- reactiveVal(NULL)
   data2 <- NULL
   conf_msg <- reactiveVal("")
   conf_msg2 <- reactiveVal("")
-  sp_ori <- reactive({input$ori_stops})
-  sp_dst <- reactive({input$dst_stops})
-  spec_stops <- reactive({input$seespecstops})
-  day_filter <- reactive(input$day_filter)
-  time_since <- reactive(input$time_since)
-  time_until <- reactive(input$time_until)
   fetched_data <- reactiveVal(NULL)
   
   interval2hours <- function(start, end) {
@@ -232,8 +256,13 @@ server <- function(input, output, session) {
     data1(pre_data1)
   })
   
+  observeEvent(input$discord_data$data1, {
+    pre_data1 <- read.csv(text = input$discord_data$data1, colClasses = c("ORIGIN_PT_CODE" = "character", "DESTINATION_PT_CODE" = "character"))
+    data1(pre_data1)
+  })
+  
   observeEvent(input$json_data_in, {
-    # If the JS sends a JSON string, you might want to store it directly.
+    # If the JS sends a JSON string, store it directly.
     if (is.null(data2)) {
     fetched_data(input$json_data_in)
     }
@@ -247,8 +276,12 @@ server <- function(input, output, session) {
     }
   })
   
-  result <- eventReactive(list(input$generate, fetched_data()), {
-    req(input$generate)
+  result <- eventReactive(list(input$generate, fetched_data(), discord_data()), {
+    if (identical(discord_data(), NULL)) {
+      req(input$generate)
+    } else {
+      req(!is.null(discord_data()))
+    }
     # Check that data1 exists before proceeding.
     if (is.null(data1())) {
       tryCatch({
@@ -265,37 +298,51 @@ server <- function(input, output, session) {
       data2 <- json_data$data2
       data3 <- json_data$data3
     }
-    conf_msg2("<span style='color:#2050C0; font-weight:bold;'><i class='fas fa-circle-info'></i> Calculating things, please wait...")
     svc2 <- as.character(svc())
     dir2 <- as.numeric(dir())
-    if (identical(day_filter(), "cmb")) {
+    if (identical(day_filter(), "combined")) {
       day_type <- "Combined"
-    } else if (identical(day_filter(), "wkday")) {
+    } else if (identical(day_filter(), "weekday")) {
       day_type <- "Weekday"
-    } else if (identical(day_filter(), "wkend_ph")) {
+    } else if (identical(day_filter(), "weekend_ph")) {
       day_type <- "Weekend/PH"
     }
-    filter_day_type <- if ("wkday" %in% input$day_filter) {
+    filter_day_type <- if ("weekday" %in% day_filter()) {
       quo(DAY_TYPE == "WEEKDAY")
-    } else if ("wkend_ph" %in% input$day_filter) {
+    } else if ("weekend_ph" %in% day_filter()) {
       quo(DAY_TYPE == "WEEKENDS/HOLIDAY")
     } else {
       quo(TRUE)
     }
-    if (input$time_filter) {
-      primary_start <- input$time_since1
-      primary_end   <- input$time_until1
-      valid_hours <- interval2hours(primary_start, primary_end)
-      time_period <- paste0("From ", if (nchar(primary_start) == 2) primary_start else paste0("0", primary_start), ":00 to ", if (nchar(primary_end) == 2) primary_end else paste0("0", primary_end), ":00")
-      extra_count <- as.numeric(input$more_time_filters) - 1
-      if (extra_count >= 1) {
-        for (i in 2:(extra_count + 1)) {
-          extra_start <- input[[paste0("time_since", i)]]
-          extra_end <- input[[paste0("time_until", i)]]
-          extra_hours <- interval2hours(extra_start, extra_end)
-          valid_hours <- sort(unique(c(valid_hours, extra_hours)))
-          extra_period <- paste0(if (nchar(extra_start) == 2) extra_start else paste0("0", extra_start), ":00 to ", if (nchar(extra_end) == 2) extra_end else paste0("0", extra_end), ":00")
-          time_period <- paste0(time_period, ", ", extra_period)
+    if (time_filter()) {
+      time_period <- NULL 
+      if (!identical(discord_data()$time_periods, NULL)) {
+        defined_periods <- discord_data()$time_periods
+        for (name in names(defined_periods)) {
+          period_start <- defined_periods[[name]][["time_since"]]
+          period_end   <- defined_periods[[name]][["time_until"]]
+          period_hours <- interval2hours(period_start, period_end)
+          valid_hours <- sort(unique(c(valid_hours, period_hours)))
+          if (is.null(time_period)) {
+            time_period <- paste0("From ", if (nchar(period_start) == 2) period_start else paste0("0", period_start), ":00 to ", if (nchar(period_end) == 2) period_end else paste0("0", period_end), ":00")
+          } else {
+            extra_period <- paste0(if (nchar(period_start) == 2) period_start else paste0("0", period_start), ":00 to ", if (nchar(period_end) == 2) period_end else paste0("0", period_end), ":00")
+            time_period <- paste0(time_period, ", ", extra_period)
+          }
+        }
+      } else {
+        total_periods <- as.numeric(input$more_time_filters)
+        for (i in 1:total_periods) {
+          period_start <- time_periods()$time_since_list[[i]]
+          period_end <- time_periods()$time_until_list[[i]]
+          period_hours <- interval2hours(period_start, period_end)
+          valid_hours <- sort(unique(c(valid_hours, period_hours)))
+          if (i == 1) {
+            time_period <- paste0("From ", if (nchar(period_start) == 2) period_start else paste0("0", period_start), ":00 to ", if (nchar(period_end) == 2) period_end else paste0("0", period_end), ":00")
+          } else {
+            extra_period <- paste0(if (nchar(period_start) == 2) period_start else paste0("0", period_start), ":00 to ", if (nchar(period_end) == 2) period_end else paste0("0", period_end), ":00")
+            time_period <- paste0(time_period, ", ", extra_period)
+          }
         }
       }
       filter_time_period <- quo(TIME_PER_HOUR %in% valid_hours)
@@ -303,7 +350,7 @@ server <- function(input, output, session) {
       filter_time_period <- quo(TRUE)
       time_period <- "Full Day"
     }
-    if (identical(input$seespecstops, F)) {
+    if (identical(spec_stops(), F)) {
       stop_half_opt = svc_half()
       stop_cur <- data2[[svc2]]$routes[[dir2]]
       if (is.null(stop_cur)) {
@@ -395,12 +442,12 @@ server <- function(input, output, session) {
       odgroup1 <- odgroup_crowd
       cols = colorRamp2(c(0, 1, 30, 300, 1500, 6000, 30000, 99000), c("gray60","white","white", "yellow", "orange", "red", "darkred","black"))
       max_length <- 2 * max(nchar(stop_names[,2]))
-      column_labels <- if ("column_names" %in% input$stop_names) {
+      column_labels <- if ("column_names" %in% input$stop_names || display_stop_names()$columns == TRUE) {
         paste(stop_names[1:nrow(stop_names)-1,1], "     ", stop_names[1:nrow(stop_names)-1,2], sep = "")
       } else {
         paste(stop_names[1:nrow(stop_names)-1,1])
       }
-      row_labels <- if ("row_names" %in% input$stop_names) {
+      row_labels <- if ("row_names" %in% input$stop_names || display_stop_names()$rows == TRUE) {
         paste(stop_names[2:nrow(stop_names),2], "     ", stop_names[2:nrow(stop_names),1], sep = "")
       } else {
         paste(stop_names[2:nrow(stop_names)-1,1])
@@ -487,7 +534,7 @@ server <- function(input, output, session) {
           summarise(Total = sum(TOTAL_TRIPS)) %>%
           pull(Total) %>%
           as.numeric()
-        if ("row_names" %in% input$stop_names) {
+        if ("row_names" %in% input$stop_names || display_stop_names()$cells == TRUE) {
           dataod3a[t, 1] <- data3[[as.character(ori_stop)]][[3]]
           dataod3a[t, 2] <- data3[[as.character(dst_stop)]][[3]]
          }
@@ -523,7 +570,7 @@ server <- function(input, output, session) {
               x = x, y = y, width = width, height = height,
               gp = gpar(fill = "white", col = "black", lwd = 0.2)
             )
-            if (input$stop_names2) {
+            if (input$stop_names2 || display_stop_names()$cells == TRUE) {
               grid.text(sprintf("%s\n%s", dataod3[i, j], dataod3a[i, j]), x, y, gp = gpar(fontsize = 11, col = "black"))
             } else {
               grid.text(sprintf("%s", dataod3[i, j]), x, y, gp = gpar(fontsize = 15, col = "black"))
@@ -542,12 +589,10 @@ server <- function(input, output, session) {
       }
       list(img = img, img_dims = img_dims)
   })
-  output$result_out <- renderImage({
-    req(result())
-  
+  draw_heatmap <- function(heatmap, img_dims) {
     # Retrieve dimensions
-    img_width  <- 1.5 * result()$img_dims$width
-    img_height <- 1.5 * result()$img_dims$height
+    img_width  <- 1.5 * img_dims$width
+    img_height <- 1.5 * img_dims$height
     
     # Create a temporary PNG file
     temp_file <- tempfile(fileext = ".png")
@@ -575,7 +620,16 @@ server <- function(input, output, session) {
       height = img_height,
       alt = "Demand Heatmap"
     )
+  }
+  output$result_out <- renderImage({
+    req(result())
+    draw_heatmap(result()$img, result()$img_dims)
   }, deleteFile = FALSE)
+  discord_image <- eventReactive(result(), {
+    req(result())
+    discord_img <- draw_heatmap(result()$img, result()$img_dims)
+    session$sendCustomMessage("send_image", discord_img)
+  })
   observe(result())
   output$upload_conf <- renderText({HTML(conf_msg())})
   output$result_conf <- renderText({HTML(conf_msg2())})
